@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 import { CreateChannelDialog } from '@/components/channel/CreateChannelDialog';
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
@@ -36,9 +37,26 @@ const machineStatusDot: Record<string, string> = {
   offline: 'bg-gray-500',
 };
 
+// ── Helpers ─────────────────────────────────────────────────────
+
+function copyToClipboard(text: string) {
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+function channelUrl(workspaceId: string, channelId: string) {
+  return `${window.location.origin}/workspaces/${workspaceId}/channels/${channelId}`;
+}
+
+// ── Machine Section ─────────────────────────────────────────────
+
 function MachineSection({ workspaceId, onAddMachine }: { workspaceId: string; onAddMachine: () => void }) {
   const router = useRouter();
   const { data: machines } = trpc.machines.list.useQuery({ workspaceId });
+  const utils = trpc.useUtils();
+
+  const deregister = trpc.machines.deregister.useMutation({
+    onSuccess: () => utils.machines.list.invalidate({ workspaceId }),
+  });
 
   return (
     <div className="mt-3">
@@ -46,34 +64,56 @@ function MachineSection({ workspaceId, onAddMachine }: { workspaceId: string; on
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Machines
         </p>
-        <button
-          type="button"
-          onClick={onAddMachine}
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          title="Add machine"
-        >
+        <button type="button" onClick={onAddMachine}
+          className="text-muted-foreground hover:text-foreground transition-colors" title="Add machine">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
       </div>
       {machines && machines.length > 0 && machines.map((machine) => (
-        <button
+        <ContextMenu
           key={machine.id}
-          type="button"
-          onClick={() => router.push(`/workspaces/${workspaceId}/machines/${machine.id}`)}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+          menu={
+            <>
+              <ContextMenuItem onClick={() => router.push(`/workspaces/${workspaceId}/machines/${machine.id}`)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                View machine
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => copyToClipboard(machine.id)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                Copy machine ID
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                className="text-red-400 hover:text-red-300"
+                onClick={() => { if (confirm(`Deregister "${machine.name}"?`)) deregister.mutate({ id: machine.id }); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Deregister
+              </ContextMenuItem>
+            </>
+          }
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-60">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
-          <div className={cn('h-2 w-2 rounded-full shrink-0', machineStatusDot[machine.status] ?? 'bg-gray-500')} />
-          <span className="truncate">{machine.name}</span>
-          <span className="ml-auto text-[10px] opacity-60">{machine.machineType}</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => router.push(`/workspaces/${workspaceId}/machines/${machine.id}`)}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-60">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+            </svg>
+            <div className={cn('h-2 w-2 rounded-full shrink-0', machineStatusDot[machine.status] ?? 'bg-gray-500')} />
+            <span className="truncate">{machine.name}</span>
+            <span className="ml-auto text-[10px] opacity-60">{machine.machineType}</span>
+          </button>
+        </ContextMenu>
       ))}
       {(!machines || machines.length === 0) && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No machines yet</p>
@@ -81,6 +121,8 @@ function MachineSection({ workspaceId, onAddMachine }: { workspaceId: string; on
     </div>
   );
 }
+
+// ── Agent Section ───────────────────────────────────────────────
 
 function AgentSection({ workspaceId, onSpawnAgent }: { workspaceId: string; onSpawnAgent: () => void }) {
   const router = useRouter();
@@ -94,56 +136,109 @@ function AgentSection({ workspaceId, onSpawnAgent }: { workspaceId: string; onSp
     },
   });
 
+  const wakeAgent = trpc.agents.wake.useMutation({
+    onSuccess: () => utils.agents.list.invalidate({ workspaceId }),
+  });
+  const sleepAgent = trpc.agents.sleep.useMutation({
+    onSuccess: () => utils.agents.list.invalidate({ workspaceId }),
+  });
+  const deleteAgent = trpc.agents.delete.useMutation({
+    onSuccess: () => utils.agents.list.invalidate({ workspaceId }),
+  });
+
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between px-2 py-1">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Agents
         </p>
-        <button
-          type="button"
-          onClick={onSpawnAgent}
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          title="Add agent"
-        >
+        <button type="button" onClick={onSpawnAgent}
+          className="text-muted-foreground hover:text-foreground transition-colors" title="Add agent">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
       </div>
       {agents && agents.length > 0 && agents.map((agent) => (
-        <div
+        <ContextMenu
           key={agent.id}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground group"
+          menu={
+            <>
+              <ContextMenuItem onClick={() => openDM.mutate({ workspaceId, agentId: agent.id })}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Message
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => router.push(`/workspaces/${workspaceId}/agents/${agent.id}`)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                Edit agent
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => copyToClipboard(agent.id)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                Copy agent ID
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              {agent.status === 'sleeping' || agent.status === 'offline' ? (
+                <ContextMenuItem onClick={() => wakeAgent.mutate({ id: agent.id })}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  Wake
+                </ContextMenuItem>
+              ) : agent.status === 'active' ? (
+                <ContextMenuItem onClick={() => sleepAgent.mutate({ id: agent.id })}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                    <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
+                  </svg>
+                  Sleep
+                </ContextMenuItem>
+              ) : null}
+              <ContextMenuItem
+                className="text-red-400 hover:text-red-300"
+                onClick={() => { if (confirm(`Delete agent "${agent.name}"?`)) deleteAgent.mutate({ id: agent.id }); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Delete agent
+              </ContextMenuItem>
+            </>
+          }
         >
-          <div className={cn('h-2 w-2 rounded-full shrink-0', agentStatusDot[agent.status] ?? 'bg-gray-500')} />
-          <button
-            type="button"
-            onClick={() => openDM.mutate({ workspaceId, agentId: agent.id })}
-            className="truncate hover:text-foreground transition-colors text-left"
-            title={`DM ${agent.name}`}
-          >
-            {agent.name}
-          </button>
-          <span className="text-[10px] opacity-60">
-            {agentTypeLabel[agent.agentType] ?? agent.agentType}
-          </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/workspaces/${workspaceId}/agents/${agent.id}`);
-            }}
-            className="ml-auto opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
-            title="Edit agent"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-          </button>
-        </div>
+          <div className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground group">
+            <div className={cn('h-2 w-2 rounded-full shrink-0', agentStatusDot[agent.status] ?? 'bg-gray-500')} />
+            <button
+              type="button"
+              onClick={() => openDM.mutate({ workspaceId, agentId: agent.id })}
+              className="truncate hover:text-foreground transition-colors text-left"
+              title={`DM ${agent.name}`}
+            >
+              {agent.name}
+            </button>
+            <span className="text-[10px] opacity-60">
+              {agentTypeLabel[agent.agentType] ?? agent.agentType}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/workspaces/${workspaceId}/agents/${agent.id}`);
+              }}
+              className="ml-auto opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
+              title="Edit agent"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+          </div>
+        </ContextMenu>
       ))}
       {(!agents || agents.length === 0) && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No agents yet</p>
@@ -152,10 +247,12 @@ function AgentSection({ workspaceId, onSpawnAgent }: { workspaceId: string; onSp
   );
 }
 
+// ── Members Section ─────────────────────────────────────────────
+
 function MembersSection({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
-  const [inviteEmail, setInviteEmail] = useState('');
   const [showInvite, setShowInvite] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
   const { data: members } = trpc.workspaces.listMembers.useQuery({ workspaceId });
   const utils = trpc.useUtils();
   const userMembers = members?.filter((m) => m.memberType === 'user') ?? [];
@@ -173,50 +270,58 @@ function MembersSection({ workspaceId }: { workspaceId: string }) {
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Members
         </p>
-        <button
-          type="button"
-          onClick={() => setShowInvite(!showInvite)}
-          className="text-muted-foreground hover:text-foreground transition-colors"
-          title="Invite member"
-        >
+        <button type="button" onClick={() => setShowInvite(!showInvite)}
+          className="text-muted-foreground hover:text-foreground transition-colors" title="Invite member">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <line x1="19" y1="8" x2="19" y2="14" />
-            <line x1="16" y1="11" x2="22" y2="11" />
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+            <line x1="19" y1="8" x2="19" y2="14" /><line x1="16" y1="11" x2="22" y2="11" />
           </svg>
         </button>
       </div>
       {showInvite && (
         <div className="px-2 py-1">
           <p className="text-xs text-muted-foreground mb-1">Invite by email (coming soon)</p>
-          <input
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            placeholder="user@example.com"
-            className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+          <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="user@example.com"
+            className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
         </div>
       )}
       {userMembers.map((member) => (
-        <div
+        <ContextMenu
           key={member.id}
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground group"
+          menu={
+            <>
+              <ContextMenuItem
+                onClick={() => member.userId && openUserDM.mutate({ workspaceId, targetUserId: member.userId })}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Message
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => copyToClipboard(member.userId ?? member.id)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                Copy user ID
+              </ContextMenuItem>
+            </>
+          }
         >
-          <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
-          <button
-            type="button"
-            onClick={() => member.userId && openUserDM.mutate({ workspaceId, targetUserId: member.userId })}
-            className="truncate hover:text-foreground transition-colors text-left"
-            title={`DM ${member.userName ?? 'User'}`}
-          >
-            {member.userName ?? 'User'}
-          </button>
-          {member.role === 'owner' && (
-            <span className="ml-auto text-[10px] opacity-60">owner</span>
-          )}
-        </div>
+          <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground group">
+            <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+            <button
+              type="button"
+              onClick={() => member.userId && openUserDM.mutate({ workspaceId, targetUserId: member.userId })}
+              className="truncate hover:text-foreground transition-colors text-left"
+              title={`DM ${member.userName ?? 'User'}`}
+            >
+              {member.userName ?? 'User'}
+            </button>
+            {member.role === 'owner' && (
+              <span className="ml-auto text-[10px] opacity-60">owner</span>
+            )}
+          </div>
+        </ContextMenu>
       ))}
       {userMembers.length === 0 && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No members</p>
@@ -224,6 +329,8 @@ function MembersSection({ workspaceId }: { workspaceId: string }) {
     </div>
   );
 }
+
+// ── Channel helpers ─────────────────────────────────────────────
 
 function ChannelIcon({ type }: { type: string }) {
   if (type === 'dm') return <span className="text-muted-foreground">@</span>;
@@ -243,6 +350,16 @@ function ChannelGroup({
   pathname: string;
   onCreateChannel?: () => void;
 }) {
+  const router = useRouter();
+  const utils = trpc.useUtils();
+
+  const deleteChannel = trpc.channels.delete.useMutation({
+    onSuccess: () => {
+      utils.channels.list.invalidate({ workspaceId });
+      router.push(`/workspaces/${workspaceId}`);
+    },
+  });
+
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between px-2 py-1">
@@ -250,15 +367,10 @@ function ChannelGroup({
           {label}
         </p>
         {onCreateChannel && (
-          <button
-            type="button"
-            onClick={onCreateChannel}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            title="Create channel"
-          >
+          <button type="button" onClick={onCreateChannel}
+            className="text-muted-foreground hover:text-foreground transition-colors" title="Create channel">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
           </button>
         )}
@@ -266,20 +378,75 @@ function ChannelGroup({
       {channels.map((channel) => {
         const href = `/workspaces/${workspaceId}/channels/${channel.id}`;
         const isActive = pathname === href;
+        const isDM = channel.type === 'dm';
+
+        const menu = isDM ? (
+          <>
+            <ContextMenuItem onClick={() => router.push(href)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Open conversation
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => copyToClipboard(channelUrl(workspaceId, channel.id))}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              Copy link
+            </ContextMenuItem>
+          </>
+        ) : (
+          <>
+            <ContextMenuItem onClick={() => router.push(href)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Open channel
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => copyToClipboard(channelUrl(workspaceId, channel.id))}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              Copy link
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => copyToClipboard(channel.id)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              Copy channel ID
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              className="text-red-400 hover:text-red-300"
+              onClick={() => {
+                if (confirm(`Delete #${channel.name}? All messages will be lost.`)) {
+                  deleteChannel.mutate({ id: channel.id });
+                }
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 opacity-60">
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              Delete channel
+            </ContextMenuItem>
+          </>
+        );
+
         return (
-          <Link
-            key={channel.id}
-            href={href}
-            className={cn(
-              'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
-              isActive
-                ? 'bg-accent text-accent-foreground'
-                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
-            )}
-          >
-            <ChannelIcon type={channel.type} />
-            <span className="truncate">{channel.name}</span>
-          </Link>
+          <ContextMenu key={channel.id} menu={menu}>
+            <Link
+              href={href}
+              className={cn(
+                'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+                isActive
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+              )}
+            >
+              <ChannelIcon type={channel.type} />
+              <span className="truncate">{channel.name}</span>
+            </Link>
+          </ContextMenu>
         );
       })}
       {channels.length === 0 && (
@@ -288,6 +455,8 @@ function ChannelGroup({
     </div>
   );
 }
+
+// ── Main Sidebar ────────────────────────────────────────────────
 
 export function Sidebar() {
   const params = useParams();
@@ -374,17 +543,14 @@ export function Sidebar() {
           )}
           <DropdownMenuItem onClick={() => setCreateWorkspaceOpen(true)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2 shrink-0">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Create workspace
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push('/workspaces')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2 shrink-0">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
             </svg>
             All workspaces
           </DropdownMenuItem>
@@ -457,30 +623,16 @@ export function Sidebar() {
         )}
       </ScrollArea>
 
-      {/* Create Channel Dialog */}
+      {/* Dialogs */}
       {workspaceId && (
-        <CreateChannelDialog
-          workspaceId={workspaceId}
-          open={createChannelOpen}
-          onOpenChange={setCreateChannelOpen}
-        />
+        <CreateChannelDialog workspaceId={workspaceId} open={createChannelOpen} onOpenChange={setCreateChannelOpen} />
       )}
-
-      {/* Spawn Agent Dialog */}
       {workspaceId && (
         <SpawnAgentDialog workspaceId={workspaceId} open={spawnAgentOpen} onOpenChange={setSpawnAgentOpen} />
       )}
-
-      {/* Add Machine Dialog */}
       {workspaceId && (
-        <AddMachineDialog
-          workspaceId={workspaceId}
-          open={addMachineOpen}
-          onOpenChange={setAddMachineOpen}
-        />
+        <AddMachineDialog workspaceId={workspaceId} open={addMachineOpen} onOpenChange={setAddMachineOpen} />
       )}
-
-      {/* Create Workspace Dialog */}
       <CreateWorkspaceDialog open={createWorkspaceOpen} onOpenChange={setCreateWorkspaceOpen} />
 
       {/* Settings link */}
