@@ -29,16 +29,16 @@ interface Props {
   channelId: string;
 }
 
-type ChannelTab = 'chat' | 'pinned' | 'files' | 'tasks' | 'docs' | 'links' | 'info';
+type ChannelTab = 'chat' | 'tasks' | 'docs' | 'files' | 'links' | 'pinned';
+type ChannelView = ChannelTab | 'info';
 
-const TABS: { id: ChannelTab; label: string }[] = [
+const CHANNEL_TABS: { id: ChannelTab; label: string }[] = [
   { id: 'chat', label: 'Chat' },
-  { id: 'pinned', label: 'Pinned' },
-  { id: 'files', label: 'Files' },
   { id: 'tasks', label: 'Tasks' },
   { id: 'docs', label: 'Docs' },
+  { id: 'files', label: 'Files' },
   { id: 'links', label: 'Links' },
-  { id: 'info', label: 'Info' },
+  { id: 'pinned', label: 'Pinned' },
 ];
 
 const statusDotColor: Record<string, string> = {
@@ -53,7 +53,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
   const router = useRouter();
   const [addAgentOpen, setAddAgentOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<ChannelTab>('chat');
+  const [activeTab, setActiveTab] = useState<ChannelView>('chat');
   const [editingName, setEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const [replyTo, setReplyTo] = useState<{ id: string; content: string | null; senderName: string } | null>(null);
@@ -166,6 +166,12 @@ export function ChatView({ workspaceId, channelId }: Props) {
                   </Button>
                 }
               >
+                <DropdownMenuItem onClick={() => setActiveTab('info')}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  Channel info
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { setEditName(channel?.name ?? ''); setEditingName(true); }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -233,44 +239,52 @@ export function ChatView({ workspaceId, channelId }: Props) {
           </div>
         </div>
 
-        {/* ── Tab bar ── */}
-        <div className="flex items-center gap-0.5 px-4 pb-1 overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'px-3 py-1 text-xs rounded-md transition-colors whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-accent text-accent-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* ── Tab bar (channels only, not DMs) ── */}
+        {!isDM && (
+          <div className="flex items-center gap-0.5 px-4 pb-1 overflow-x-auto">
+            {CHANNEL_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'px-3 py-1 text-xs rounded-md transition-colors whitespace-nowrap',
+                  activeTab === tab.id
+                    ? 'bg-accent text-accent-foreground font-medium'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {!isDM && (
         <AddAgentToChannelDialog workspaceId={workspaceId} channelId={channelId} open={addAgentOpen} onOpenChange={setAddAgentOpen} />
       )}
 
-      {/* ── Main content area — switches based on active tab ── */}
+      {/* ── Main content area ── */}
       <div className="flex-1 min-h-0 flex flex-col">
-        {activeTab === 'chat' && (
+        {isDM || activeTab === 'chat' ? (
           <>
             <MessageList messages={messages} isLoading={isLoading} senderNames={senderNames} streaming={streamingEntries} onReply={setReplyTo} />
             <MessageInput channelId={channelId} workspaceId={workspaceId} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
           </>
-        )}
-        {activeTab === 'pinned' && <ChannelPinnedView channelId={channelId} />}
-        {activeTab === 'files' && <ChannelFilesView channelId={channelId} messages={messages} />}
-        {activeTab === 'tasks' && <ChannelTasksView channelId={channelId} />}
-        {activeTab === 'docs' && <ChannelDocsView channelId={channelId} />}
-        {activeTab === 'links' && <ChannelLinksView channelId={channelId} />}
-        {activeTab === 'info' && <ChannelInfoView channelId={channelId} channel={channel} />}
+        ) : activeTab === 'pinned' ? (
+          <ChannelPinnedView channelId={channelId} />
+        ) : activeTab === 'files' ? (
+          <ChannelFilesView channelId={channelId} messages={messages} />
+        ) : activeTab === 'tasks' ? (
+          <ChannelTasksView channelId={channelId} />
+        ) : activeTab === 'docs' ? (
+          <ChannelDocsView channelId={channelId} />
+        ) : activeTab === 'links' ? (
+          <ChannelLinksView channelId={channelId} />
+        ) : activeTab === 'info' ? (
+          <ChannelInfoView channelId={channelId} channel={channel} />
+        ) : null}
       </div>
     </div>
   );
