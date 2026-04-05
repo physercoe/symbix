@@ -1,2 +1,3 @@
-// @symbix/agent-bridge — CLI for connecting local machines as agent tools
-export {};
+#!/usr/bin/env node
+import { cli } from './cli.js';
+cli();
