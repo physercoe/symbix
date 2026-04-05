@@ -8,108 +8,62 @@ interface Props {
   className?: string;
 }
 
-// Cap content length to prevent browser freeze on extremely long messages
-const MAX_RENDER_LENGTH = 50_000;
-
+/**
+ * Fast markdown renderer — converts markdown to HTML via string replacements.
+ * Uses dangerouslySetInnerHTML for performance (no React element tree overhead).
+ * Only renders user/agent-authored chat messages, not arbitrary external HTML.
+ */
 export function Markdown({ content, className }: Props) {
-  const result = useMemo(() => {
-    try {
-      const text = content.length > MAX_RENDER_LENGTH
-        ? content.slice(0, MAX_RENDER_LENGTH) + '\n\n...(truncated)'
-        : content;
-      return { blocks: parseBlocks(text), error: false };
-    } catch {
-      return { blocks: [] as BlockType[], error: true };
-    }
-  }, [content]);
-
-  // Fallback: render as plain preformatted text if parsing fails
-  if (result.error) {
-    return (
-      <div className={cn('prose-sm max-w-none whitespace-pre-wrap', className)}>
-        {content}
-      </div>
-    );
-  }
+  const html = useMemo(() => markdownToHtml(content), [content]);
 
   return (
-    <div className={cn('prose-sm max-w-none', className)}>
-      {result.blocks.map((block, i) => (
-        <Block key={i} block={block} />
-      ))}
-    </div>
+    <div
+      className={cn('prose-sm max-w-none break-words', className)}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
-type BlockType =
-  | { type: 'code'; lang: string; content: string }
-  | { type: 'blockquote'; content: string }
-  | { type: 'heading'; level: number; content: string }
-  | { type: 'list'; ordered: boolean; items: string[] }
-  | { type: 'paragraph'; content: string };
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
-function parseBlocks(text: string): BlockType[] {
-  const blocks: BlockType[] = [];
+function markdownToHtml(src: string): string {
+  // Split into code blocks vs everything else
+  const parts: string[] = [];
+  const codeBlockRe = /```(\w*)\n([\s\S]*?)```/g;
+  let last = 0;
+  let match;
+
+  while ((match = codeBlockRe.exec(src)) !== null) {
+    if (match.index > last) {
+      parts.push(processNonCode(src.slice(last, match.index)));
+    }
+    const code = escapeHtml(match[2]);
+    parts.push(
+      `<pre class="my-2 rounded-md bg-zinc-900 p-3 overflow-x-auto"><code class="text-xs text-zinc-100 font-mono whitespace-pre-wrap break-words">${code}</code></pre>`
+    );
+    last = match.index + match[0].length;
+  }
+
+  if (last < src.length) {
+    parts.push(processNonCode(src.slice(last)));
+  }
+
+  return parts.join('');
+}
+
+function processNonCode(text: string): string {
   const lines = text.split('\n');
+  const out: string[] = [];
   let i = 0;
 
   while (i < lines.length) {
     const line = lines[i];
-
-    // Code block
-    if (line.startsWith('```')) {
-      const lang = line.slice(3).trim();
-      const codeLines: string[] = [];
-      i++;
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeLines.push(lines[i]);
-        i++;
-      }
-      blocks.push({ type: 'code', lang, content: codeLines.join('\n') });
-      i++; // skip closing ```
-      continue;
-    }
-
-    // Heading
-    const headingMatch = line.match(/^(#{1,3})\s+(.+)/);
-    if (headingMatch) {
-      blocks.push({ type: 'heading', level: headingMatch[1].length, content: headingMatch[2] });
-      i++;
-      continue;
-    }
-
-    // Blockquote
-    if (line.startsWith('> ')) {
-      const quoteLines: string[] = [];
-      while (i < lines.length && lines[i].startsWith('> ')) {
-        quoteLines.push(lines[i].slice(2));
-        i++;
-      }
-      blocks.push({ type: 'blockquote', content: quoteLines.join('\n') });
-      continue;
-    }
-
-    // Unordered list
-    if (line.match(/^[-*]\s+/)) {
-      const items: string[] = [];
-      while (i < lines.length && lines[i].match(/^[-*]\s+/)) {
-        items.push(lines[i].replace(/^[-*]\s+/, ''));
-        i++;
-      }
-      blocks.push({ type: 'list', ordered: false, items });
-      continue;
-    }
-
-    // Ordered list
-    if (line.match(/^\d+\.\s+/)) {
-      const items: string[] = [];
-      while (i < lines.length && lines[i].match(/^\d+\.\s+/)) {
-        items.push(lines[i].replace(/^\d+\.\s+/, ''));
-        i++;
-      }
-      blocks.push({ type: 'list', ordered: true, items });
-      continue;
-    }
 
     // Empty line
     if (line.trim() === '') {
@@ -117,172 +71,104 @@ function parseBlocks(text: string): BlockType[] {
       continue;
     }
 
-    // Paragraph — collect consecutive non-special lines
-    const paraLines: string[] = [];
+    // Heading
+    const hm = line.match(/^(#{1,6})\s+(.+)/);
+    if (hm) {
+      const level = hm[1].length;
+      const cls = level <= 1 ? 'text-base font-bold my-2'
+        : level === 2 ? 'text-sm font-bold my-1.5'
+        : 'text-sm font-semibold my-1';
+      out.push(`<p class="${cls}">${inlineToHtml(hm[2])}</p>`);
+      i++;
+      continue;
+    }
+
+    // Blockquote
+    if (line.startsWith('> ')) {
+      const qlines: string[] = [];
+      while (i < lines.length && lines[i].startsWith('>')) {
+        qlines.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+      out.push(
+        `<blockquote class="my-1.5 border-l-2 border-zinc-600 pl-3 text-zinc-400 italic">${inlineToHtml(qlines.join(' '))}</blockquote>`
+      );
+      continue;
+    }
+
+    // Unordered list
+    if (/^[-*+]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^(\s*[-*+]\s+)/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*[-*+]\s+/, ''));
+        i++;
+      }
+      out.push(
+        `<ul class="my-1 pl-5 list-disc">${items.map((it) => `<li class="text-sm">${inlineToHtml(it)}</li>`).join('')}</ul>`
+      );
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+[.)]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^(\s*\d+[.)]\s+)/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*\d+[.)]\s+/, ''));
+        i++;
+      }
+      out.push(
+        `<ol class="my-1 pl-5 list-decimal">${items.map((it) => `<li class="text-sm">${inlineToHtml(it)}</li>`).join('')}</ol>`
+      );
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^[-*_]{3,}\s*$/.test(line)) {
+      out.push('<hr class="my-2 border-zinc-700" />');
+      i++;
+      continue;
+    }
+
+    // Paragraph — collect consecutive lines
+    const plines: string[] = [];
     while (
       i < lines.length &&
       lines[i].trim() !== '' &&
       !lines[i].startsWith('```') &&
-      !lines[i].startsWith('#') &&
-      !lines[i].startsWith('> ') &&
-      !lines[i].match(/^[-*]\s+/) &&
-      !lines[i].match(/^\d+\.\s+/)
+      !/^#{1,6}\s/.test(lines[i]) &&
+      !lines[i].startsWith('>') &&
+      !/^[-*+]\s+/.test(lines[i]) &&
+      !/^\d+[.)]\s+/.test(lines[i]) &&
+      !/^[-*_]{3,}\s*$/.test(lines[i])
     ) {
-      paraLines.push(lines[i]);
+      plines.push(lines[i]);
       i++;
     }
-    if (paraLines.length > 0) {
-      blocks.push({ type: 'paragraph', content: paraLines.join('\n') });
+    if (plines.length > 0) {
+      out.push(`<p class="my-1">${inlineToHtml(plines.join('\n'))}</p>`);
     }
   }
 
-  return blocks;
+  return out.join('');
 }
 
-function Block({ block }: { block: BlockType }) {
-  switch (block.type) {
-    case 'code':
-      return (
-        <pre className="my-2 rounded-md bg-zinc-900 p-3 overflow-x-auto">
-          <code className="text-xs text-zinc-100 font-mono whitespace-pre-wrap break-words">{block.content}</code>
-        </pre>
-      );
-    case 'heading': {
-      const cls = block.level === 1
-        ? 'text-base font-bold my-2'
-        : block.level === 2
-          ? 'text-sm font-bold my-1.5'
-          : 'text-sm font-semibold my-1';
-      return <p className={cls}><InlineText text={block.content} /></p>;
-    }
-    case 'blockquote':
-      return (
-        <blockquote className="my-1.5 border-l-2 border-muted-foreground/30 pl-3 text-muted-foreground italic">
-          <InlineText text={block.content} />
-        </blockquote>
-      );
-    case 'list': {
-      const Tag = block.ordered ? 'ol' : 'ul';
-      return (
-        <Tag className={cn('my-1 pl-5', block.ordered ? 'list-decimal' : 'list-disc')}>
-          {block.items.map((item, i) => (
-            <li key={i} className="text-sm"><InlineText text={item} /></li>
-          ))}
-        </Tag>
-      );
-    }
-    case 'paragraph':
-      return <p className="my-1"><InlineText text={block.content} /></p>;
-  }
-}
+function inlineToHtml(text: string): string {
+  let s = escapeHtml(text);
 
-/**
- * Iterative inline parser — avoids regex backtracking.
- * On unmatched markers, treats them as literal text and advances.
- */
-function InlineText({ text }: { text: string }) {
-  const parts = useMemo(() => parseInline(text), [text]);
-  return <>{parts}</>;
-}
+  // Inline code (must come before bold/italic to avoid conflicts)
+  s = s.replace(/`([^`]+)`/g, '<code class="rounded bg-zinc-800 px-1 py-0.5 text-xs font-mono text-zinc-200">$1</code>');
 
-function parseInline(text: string): React.ReactNode[] {
-  // Safety: skip inline parsing for very long text
-  if (text.length > 10_000) return [text];
+  // Bold
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold">$1</strong>');
 
-  const parts: React.ReactNode[] = [];
-  let i = 0;
-  let buf = '';
-  let key = 0;
-  let iterations = 0;
-  const maxIterations = text.length * 2; // absolute safety bound
+  // Italic
+  s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  const flush = () => {
-    if (buf) {
-      parts.push(buf);
-      buf = '';
-    }
-  };
+  // Links [text](url)
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
 
-  while (i < text.length) {
-    if (++iterations > maxIterations) {
-      // Safety bail — dump remaining text and stop
-      buf += text.slice(i);
-      break;
-    }
-    // ** bold ** — need closing ** with content between
-    if (text[i] === '*' && text[i + 1] === '*') {
-      const end = text.indexOf('**', i + 2);
-      if (end > i + 2) {
-        flush();
-        parts.push(<strong key={key++} className="font-semibold">{text.slice(i + 2, end)}</strong>);
-        i = end + 2;
-        continue;
-      }
-      // No closing ** found — treat as literal
-      buf += '**';
-      i += 2;
-      continue;
-    }
+  // Line breaks within a paragraph
+  s = s.replace(/\n/g, '<br/>');
 
-    // * italic * — need closing * with content between, and closing must not be followed by *
-    if (text[i] === '*') {
-      const end = text.indexOf('*', i + 1);
-      if (end > i + 1) {
-        flush();
-        parts.push(<em key={key++}>{text.slice(i + 1, end)}</em>);
-        i = end + 1;
-        continue;
-      }
-      buf += '*';
-      i++;
-      continue;
-    }
-
-    // ` inline code `
-    if (text[i] === '`') {
-      const end = text.indexOf('`', i + 1);
-      if (end > i + 1) {
-        flush();
-        parts.push(
-          <code key={key++} className="rounded bg-zinc-800 px-1 py-0.5 text-xs font-mono text-zinc-200">
-            {text.slice(i + 1, end)}
-          </code>
-        );
-        i = end + 1;
-        continue;
-      }
-      buf += '`';
-      i++;
-      continue;
-    }
-
-    // [link text](url)
-    if (text[i] === '[') {
-      const closeBracket = text.indexOf(']', i + 1);
-      if (closeBracket !== -1 && text[closeBracket + 1] === '(') {
-        const closeParen = text.indexOf(')', closeBracket + 2);
-        if (closeParen !== -1) {
-          const linkText = text.slice(i + 1, closeBracket);
-          const url = text.slice(closeBracket + 2, closeParen);
-          flush();
-          parts.push(
-            <a key={key++} href={url} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">
-              {linkText}
-            </a>
-          );
-          i = closeParen + 1;
-          continue;
-        }
-      }
-      buf += '[';
-      i++;
-      continue;
-    }
-
-    buf += text[i];
-    i++;
-  }
-
-  flush();
-  return parts;
+  return s;
 }
