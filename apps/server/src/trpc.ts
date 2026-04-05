@@ -1,11 +1,9 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
-import { createClerkClient } from '@clerk/backend';
+import { verifyToken } from '@clerk/backend';
 import { db } from './db/index.js';
 import { redis } from './redis.js';
 import { env } from './env.js';
-
-const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
 
 export async function createContext({ req }: CreateFastifyContextOptions) {
   let userId: string | null = null;
@@ -13,7 +11,7 @@ export async function createContext({ req }: CreateFastifyContextOptions) {
   if (authHeader?.startsWith('Bearer ')) {
     try {
       const token = authHeader.slice(7);
-      const payload = await clerk.verifyToken(token);
+      const payload = await verifyToken(token, { secretKey: env.CLERK_SECRET_KEY });
       userId = payload.sub;
     } catch (err) {
       console.error('Clerk verifyToken failed:', err);
