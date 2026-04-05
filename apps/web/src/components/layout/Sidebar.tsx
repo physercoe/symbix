@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { UserButton } from '@clerk/nextjs';
 import { trpc } from '@/lib/trpc';
@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { CreateChannelDialog } from '@/components/channel/CreateChannelDialog';
+import { SpawnAgentDialog } from '@/components/agent/SpawnAgentDialog';
 
 const agentStatusDot: Record<string, string> = {
   active: 'bg-green-500',
@@ -33,6 +34,7 @@ const machineStatusDot: Record<string, string> = {
 };
 
 function MachineSection({ workspaceId }: { workspaceId: string }) {
+  const router = useRouter();
   const { data: machines } = trpc.machines.list.useQuery({ workspaceId });
   if (!machines || machines.length === 0) return null;
 
@@ -42,40 +44,62 @@ function MachineSection({ workspaceId }: { workspaceId: string }) {
         Machines
       </p>
       {machines.map((machine) => (
-        <div
+        <button
           key={machine.id}
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground"
+          type="button"
+          onClick={() => router.push(`/workspaces/${workspaceId}/settings`)}
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
         >
           <div className={cn('h-2 w-2 rounded-full shrink-0', machineStatusDot[machine.status] ?? 'bg-gray-500')} />
           <span className="truncate">{machine.name}</span>
           <span className="ml-auto text-[10px] opacity-60">{machine.machineType}</span>
-        </div>
+        </button>
       ))}
     </div>
   );
 }
 
 function AgentSection({ workspaceId }: { workspaceId: string }) {
+  const router = useRouter();
+  const [spawnOpen, setSpawnOpen] = useState(false);
   const { data: agents } = trpc.agents.list.useQuery({ workspaceId });
-  if (!agents || agents.length === 0) return null;
 
   return (
     <div className="mt-3">
-      <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-        Agents
-      </p>
-      {agents.map((agent) => (
-        <div
+      <div className="flex items-center justify-between px-2 py-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Agents
+        </p>
+        <button
+          type="button"
+          onClick={() => setSpawnOpen(true)}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          title="Add agent"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+      </div>
+      {agents && agents.length > 0 && agents.map((agent) => (
+        <button
           key={agent.id}
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground"
+          type="button"
+          onClick={() => router.push(`/workspaces/${workspaceId}/settings`)}
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
         >
           <div className={cn('h-2 w-2 rounded-full shrink-0', agentStatusDot[agent.status] ?? 'bg-gray-500')} />
           <span className="truncate">{agent.name}</span>
           <span className="ml-auto text-[10px] opacity-60">
             {agentTypeLabel[agent.agentType] ?? agent.agentType}
           </span>
-        </div>
+        </button>
       ))}
+      {(!agents || agents.length === 0) && (
+        <p className="px-2 py-1 text-xs text-muted-foreground">No agents yet</p>
+      )}
+      <SpawnAgentDialog workspaceId={workspaceId} open={spawnOpen} onOpenChange={setSpawnOpen} />
     </div>
   );
 }
@@ -90,18 +114,34 @@ function ChannelGroup({
   channels,
   workspaceId,
   pathname,
+  onCreateChannel,
 }: {
   label: string;
   channels: Array<{ id: string; name: string; type: string }>;
   workspaceId: string;
   pathname: string;
+  onCreateChannel?: () => void;
 }) {
-  if (channels.length === 0) return null;
   return (
     <div className="mt-3">
-      <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-        {label}
-      </p>
+      <div className="flex items-center justify-between px-2 py-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          {label}
+        </p>
+        {onCreateChannel && (
+          <button
+            type="button"
+            onClick={onCreateChannel}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            title="Create channel"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        )}
+      </div>
       {channels.map((channel) => {
         const href = `/workspaces/${workspaceId}/channels/${channel.id}`;
         const isActive = pathname === href;
@@ -121,6 +161,9 @@ function ChannelGroup({
           </Link>
         );
       })}
+      {channels.length === 0 && (
+        <p className="px-2 py-1 text-xs text-muted-foreground">None</p>
+      )}
     </div>
   );
 }
@@ -182,27 +225,35 @@ export function Sidebar() {
               channels={publicChannels}
               workspaceId={workspaceId}
               pathname={pathname}
+              onCreateChannel={() => setCreateChannelOpen(true)}
             />
-            <ChannelGroup
-              label="Private"
-              channels={privateChannels}
-              workspaceId={workspaceId}
-              pathname={pathname}
-            />
-            <ChannelGroup
-              label="Direct Messages"
-              channels={dmChannels}
-              workspaceId={workspaceId}
-              pathname={pathname}
-            />
-            <ChannelGroup
-              label="Devices"
-              channels={deviceChannels}
-              workspaceId={workspaceId}
-              pathname={pathname}
-            />
-            <MachineSection workspaceId={workspaceId} />
+            {privateChannels.length > 0 && (
+              <ChannelGroup
+                label="Private"
+                channels={privateChannels}
+                workspaceId={workspaceId}
+                pathname={pathname}
+              />
+            )}
+            {dmChannels.length > 0 && (
+              <ChannelGroup
+                label="Direct Messages"
+                channels={dmChannels}
+                workspaceId={workspaceId}
+                pathname={pathname}
+              />
+            )}
+            {deviceChannels.length > 0 && (
+              <ChannelGroup
+                label="Devices"
+                channels={deviceChannels}
+                workspaceId={workspaceId}
+                pathname={pathname}
+              />
+            )}
+            <Separator className="my-2" />
             <AgentSection workspaceId={workspaceId} />
+            <MachineSection workspaceId={workspaceId} />
           </>
         ) : (
           !workspaceId && (
@@ -213,24 +264,13 @@ export function Sidebar() {
         )}
       </ScrollArea>
 
-      {/* Create Channel */}
+      {/* Create Channel Dialog */}
       {workspaceId && (
-        <div className="px-3 py-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={() => setCreateChannelOpen(true)}
-          >
-            <span className="mr-2 text-base leading-none">+</span>
-            Create Channel
-          </Button>
-          <CreateChannelDialog
-            workspaceId={workspaceId}
-            open={createChannelOpen}
-            onOpenChange={setCreateChannelOpen}
-          />
-        </div>
+        <CreateChannelDialog
+          workspaceId={workspaceId}
+          open={createChannelOpen}
+          onOpenChange={setCreateChannelOpen}
+        />
       )}
 
       {/* Settings link */}

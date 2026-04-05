@@ -1,23 +1,28 @@
 'use client';
 
 import { useMemo } from 'react';
+import { trpc } from '@/lib/trpc';
 import { useAgentStore } from '@/stores/agent-store';
 
 interface Props {
   channelId: string;
+  workspaceId: string;
 }
 
-export function TypingIndicator({ channelId }: Props) {
+export function TypingIndicator({ channelId, workspaceId }: Props) {
   const typingMap = useAgentStore((s) => s.typing);
+  const { data: allAgents } = trpc.agents.list.useQuery({ workspaceId });
+
   const typing = useMemo(() => {
     const result: string[] = [];
     for (const [agentId, data] of typingMap) {
       if (data.channelId === channelId) {
-        result.push(agentId.slice(0, 8));
+        const agent = allAgents?.find((a) => a.id === agentId);
+        result.push(agent?.name ?? agentId.slice(0, 8));
       }
     }
     return result;
-  }, [typingMap, channelId]);
+  }, [typingMap, channelId, allAgents]);
 
   if (typing.length === 0) return null;
 
@@ -26,7 +31,7 @@ export function TypingIndicator({ channelId }: Props) {
       <p className="text-xs text-muted-foreground animate-pulse">
         {typing.length === 1
           ? `${typing[0]} is typing...`
-          : `${typing.length} agents are typing...`}
+          : `${typing.join(', ')} are typing...`}
       </p>
     </div>
   );

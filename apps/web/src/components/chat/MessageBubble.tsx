@@ -6,9 +6,10 @@ import type { Message } from '@symbix/shared';
 interface Props {
   message: Message;
   showHeader: boolean;
+  senderName?: string;
 }
 
-export function MessageBubble({ message, showHeader }: Props) {
+export function MessageBubble({ message, showHeader, senderName }: Props) {
   const isAgent = message.senderType === 'agent';
   const isSystem = message.senderType === 'system';
 
@@ -22,6 +23,7 @@ export function MessageBubble({ message, showHeader }: Props) {
     );
   }
 
+  const displayName = senderName || message.senderId.slice(0, 8);
   const time = new Date(message.createdAt).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
@@ -37,7 +39,7 @@ export function MessageBubble({ message, showHeader }: Props) {
       {showHeader && (
         <Avatar
           size="sm"
-          fallback={isAgent ? 'A' : 'U'}
+          fallback={isAgent ? displayName[0]?.toUpperCase() ?? 'A' : displayName[0]?.toUpperCase() ?? 'U'}
           className={cn(isAgent && 'bg-violet-500/20')}
         />
       )}
@@ -50,7 +52,7 @@ export function MessageBubble({ message, showHeader }: Props) {
                 isAgent && 'text-violet-400',
               )}
             >
-              {message.senderId.slice(0, 8)}
+              {displayName}
             </span>
             {isAgent && (
               <Badge variant="secondary" className="text-[10px] px-1 py-0">

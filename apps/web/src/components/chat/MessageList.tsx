@@ -9,9 +9,10 @@ import type { Message } from '@symbix/shared';
 interface Props {
   messages: Message[];
   isLoading: boolean;
+  senderNames?: Map<string, string>;
 }
 
-export function MessageList({ messages, isLoading }: Props) {
+export function MessageList({ messages, isLoading, senderNames }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +55,12 @@ export function MessageList({ messages, isLoading }: Props) {
             prev.senderId !== msg.senderId ||
             prev.senderType !== msg.senderType;
           return (
-            <MessageBubble key={msg.id} message={msg} showHeader={showHeader} />
+            <MessageBubble
+              key={msg.id}
+              message={msg}
+              showHeader={showHeader}
+              senderName={senderNames?.get(msg.senderId)}
+            />
           );
         })}
         <div ref={bottomRef} />
