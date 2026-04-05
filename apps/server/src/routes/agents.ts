@@ -23,6 +23,8 @@ export const agentsRouter = router({
           systemPrompt: input.systemPrompt,
           llmProvider: input.llmProvider,
           llmModel: input.llmModel,
+          llmBaseUrl: input.llmBaseUrl,
+          llmApiKey: input.llmApiKey,
           agentClass: input.agentClass,
           agentType: input.agentType,
           machineId: input.machineId,

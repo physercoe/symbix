@@ -118,6 +118,7 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
     }
   } catch (err) {
     console.error(`LLM error for agent ${agentId}:`, err);
+    console.error(`Agent LLM config: provider=${agent.llmProvider}, model=${agent.llmModel}, baseUrl=${agent.llmBaseUrl}, hasApiKey=${!!agent.llmApiKey}, hasEnvKey=${agent.llmProvider === 'anthropic' ? !!env.ANTHROPIC_API_KEY : !!env.OPENAI_API_KEY}`);
     fullResponse = 'Sorry, I encountered an error generating a response.';
   }
 
