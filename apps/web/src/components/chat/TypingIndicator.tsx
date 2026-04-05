@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useAgentStore } from '@/stores/agent-store';
 
 interface Props {
@@ -7,15 +8,16 @@ interface Props {
 }
 
 export function TypingIndicator({ channelId }: Props) {
-  const typing = useAgentStore((s) => {
+  const typingMap = useAgentStore((s) => s.typing);
+  const typing = useMemo(() => {
     const result: string[] = [];
-    for (const [agentId, data] of s.typing) {
+    for (const [agentId, data] of typingMap) {
       if (data.channelId === channelId) {
         result.push(agentId.slice(0, 8));
       }
     }
     return result;
-  });
+  }, [typingMap, channelId]);
 
   if (typing.length === 0) return null;
 
