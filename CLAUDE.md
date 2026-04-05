@@ -350,6 +350,56 @@ To close the gap with Slack/Discord-quality UI, add these layers on top of the e
 
 **Key principle:** shadcn/ui is the right foundation — don't switch to MUI/Ant Design. The polish comes from these additive layers, not from replacing the component library.
 
+### P4 — Remote Machine Access (Web Terminal)
+
+Add browser-based SSH/terminal access to machines connected via agent-bridge. No public IP required — the agent-bridge already dials out to the Symbix server over WebSocket, so the connection works behind NAT, corporate firewalls, and VPNs.
+
+**Architecture:**
+```
+Internal machine (no public IP)          Symbix server (public)           Browser
+       │                                        │                           │
+       ├──── WS connect outbound ──────────────►│                           │
+       │     (agent-bridge dials OUT)            │                           │
+       │                                        │◄──── user opens terminal ─┤
+       │◄─── PTY commands relayed ──────────────┤                           │
+       ├──── PTY output relayed ───────────────►│──── xterm.js renders ────►│
+```
+
+**Key packages:**
+| Component | Package | Role |
+|-----------|---------|------|
+| Browser terminal | `xterm.js` + `@xterm/addon-fit` | Terminal emulator in the browser (used by VS Code, Jupyter, Gitpod) |
+| Machine-side PTY | `node-pty` | Spawn a real shell (bash/zsh/powershell) with full PTY support |
+| Transport | Existing agent-bridge WS | New message types: `pty_spawn`, `pty_data`, `pty_resize`, `pty_exit` |
+
+**WS protocol extension (on existing agent-bridge connection):**
+```typescript
+// Server → Machine
+{ type: 'pty_spawn', sessionId: string, cols: number, rows: number }
+{ type: 'pty_data', sessionId: string, data: string }      // stdin
+{ type: 'pty_resize', sessionId: string, cols: number, rows: number }
+
+// Machine → Server
+{ type: 'pty_data', sessionId: string, data: string }      // stdout
+{ type: 'pty_exit', sessionId: string, code: number }
+```
+
+**Security requirements:**
+- Only workspace owners/admins can open terminal sessions
+- Machine owner must explicitly enable remote shell access (opt-in flag in machine config)
+- Session audit logging (who connected, when, commands executed)
+- Read-only mode as default option, write mode opt-in
+- Rate limiting on session creation
+- Session timeout (auto-disconnect after idle period)
+- If corporate firewall blocks WS upgrade, fall back to HTTP streaming over port 443
+
+**Implementation phases:**
+1. **Command execution** (non-interactive): agent sends commands via WS, machine executes and returns output (~1-2 days)
+2. **Full web terminal** (interactive): xterm.js + node-pty over existing WS pipe (~3-5 days)
+3. **Multi-session + audit**: concurrent sessions, logging, admin controls (~2-3 days)
+
+**Prior art:** VS Code Remote Tunnels, Cloudflare Tunnel, ngrok, Tailscale DERP relay, GitHub Codespaces — all use the same outbound-connection-through-relay pattern.
+
 ---
 
 ## Common Tasks
