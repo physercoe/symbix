@@ -192,10 +192,7 @@ export const channelsRouter = router({
     .input(z.object({ workspaceId: z.string().uuid(), targetUserId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { workspaceId, targetUserId } = input;
-
-      if (targetUserId === ctx.userId) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot DM yourself' });
-      }
+      const isSelf = targetUserId === ctx.userId;
 
       // Look up target user name
       const [targetUser] = await ctx.db
@@ -204,9 +201,9 @@ export const channelsRouter = router({
         .where(eq(users.id, targetUserId))
         .limit(1);
 
-      const targetName = targetUser?.name ?? 'User';
+      const targetName = isSelf ? 'Notes (self)' : (targetUser?.name ?? 'User');
 
-      // Find existing DM channel between these two users
+      // Find existing DM channel
       const dmChannels = await ctx.db
         .select()
         .from(channels)
@@ -217,10 +214,18 @@ export const channelsRouter = router({
           .select()
           .from(channelMembers)
           .where(eq(channelMembers.channelId, ch.id));
-        const hasCurrentUser = members.some((m) => m.memberType === 'user' && m.userId === ctx.userId);
-        const hasTargetUser = members.some((m) => m.memberType === 'user' && m.userId === targetUserId);
-        if (hasCurrentUser && hasTargetUser && members.length === 2) {
-          return ch;
+
+        if (isSelf) {
+          // Self-DM: single member who is the current user
+          if (members.length === 1 && members[0].userId === ctx.userId) {
+            return ch;
+          }
+        } else {
+          const hasCurrentUser = members.some((m) => m.memberType === 'user' && m.userId === ctx.userId);
+          const hasTargetUser = members.some((m) => m.memberType === 'user' && m.userId === targetUserId);
+          if (hasCurrentUser && hasTargetUser && members.length === 2) {
+            return ch;
+          }
         }
       }
 
@@ -230,15 +235,18 @@ export const channelsRouter = router({
         .values({
           workspaceId,
           name: targetName,
-          description: `DM with ${targetName}`,
+          description: isSelf ? 'Personal notes' : `DM with ${targetName}`,
           type: 'dm',
         })
         .returning();
 
-      await ctx.db.insert(channelMembers).values([
-        { channelId: channel.id, memberType: 'user' as const, userId: ctx.userId },
-        { channelId: channel.id, memberType: 'user' as const, userId: targetUserId },
-      ]);
+      const memberRows: Array<{ channelId: string; memberType: 'user'; userId: string }> = [
+        { channelId: channel.id, memberType: 'user', userId: ctx.userId },
+      ];
+      if (!isSelf) {
+        memberRows.push({ channelId: channel.id, memberType: 'user', userId: targetUserId });
+      }
+      await ctx.db.insert(channelMembers).values(memberRows);
 
       return channel;
     }),

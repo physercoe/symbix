@@ -157,7 +157,6 @@ function MembersSection({ workspaceId }: { workspaceId: string }) {
   const [inviteEmail, setInviteEmail] = useState('');
   const [showInvite, setShowInvite] = useState(false);
   const { data: members } = trpc.workspaces.listMembers.useQuery({ workspaceId });
-  const { user: currentUser } = useUser();
   const utils = trpc.useUtils();
   const userMembers = members?.filter((m) => m.memberType === 'user') ?? [];
 
@@ -200,32 +199,25 @@ function MembersSection({ workspaceId }: { workspaceId: string }) {
           />
         </div>
       )}
-      {userMembers.map((member) => {
-        const isCurrentUser = member.userId === currentUser?.id;
-        return (
-          <div
-            key={member.id}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground group"
+      {userMembers.map((member) => (
+        <div
+          key={member.id}
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground group"
+        >
+          <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+          <button
+            type="button"
+            onClick={() => member.userId && openUserDM.mutate({ workspaceId, targetUserId: member.userId })}
+            className="truncate hover:text-foreground transition-colors text-left"
+            title={`DM ${member.userName ?? 'User'}`}
           >
-            <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
-            {isCurrentUser ? (
-              <span className="truncate">{member.userName ?? 'You'} (you)</span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => member.userId && openUserDM.mutate({ workspaceId, targetUserId: member.userId })}
-                className="truncate hover:text-foreground transition-colors text-left"
-                title={`DM ${member.userName ?? 'User'}`}
-              >
-                {member.userName ?? 'User'}
-              </button>
-            )}
-            {member.role === 'owner' && (
-              <span className="ml-auto text-[10px] opacity-60">owner</span>
-            )}
-          </div>
-        );
-      })}
+            {member.userName ?? 'User'}
+          </button>
+          {member.role === 'owner' && (
+            <span className="ml-auto text-[10px] opacity-60">owner</span>
+          )}
+        </div>
+      ))}
       {userMembers.length === 0 && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No members</p>
       )}

@@ -165,7 +165,7 @@ function Block({ block }: { block: BlockType }) {
 
 /**
  * Iterative inline parser — avoids regex backtracking.
- * Scans character by character for **, *, `, [link](url).
+ * On unmatched markers, treats them as literal text and advances.
  */
 function InlineText({ text }: { text: string }) {
   const parts = useMemo(() => parseInline(text), [text]);
@@ -186,32 +186,39 @@ function parseInline(text: string): React.ReactNode[] {
   };
 
   while (i < text.length) {
-    // ** bold **
+    // ** bold ** — need closing ** with content between
     if (text[i] === '*' && text[i + 1] === '*') {
       const end = text.indexOf('**', i + 2);
-      if (end !== -1) {
+      if (end > i + 2) {
         flush();
         parts.push(<strong key={key++} className="font-semibold">{text.slice(i + 2, end)}</strong>);
         i = end + 2;
         continue;
       }
+      // No closing ** found — treat as literal
+      buf += '**';
+      i += 2;
+      continue;
     }
 
-    // * italic *  (but not **)
-    if (text[i] === '*' && text[i + 1] !== '*') {
+    // * italic * — need closing * with content between, and closing must not be followed by *
+    if (text[i] === '*') {
       const end = text.indexOf('*', i + 1);
-      if (end !== -1 && end > i + 1) {
+      if (end > i + 1) {
         flush();
         parts.push(<em key={key++}>{text.slice(i + 1, end)}</em>);
         i = end + 1;
         continue;
       }
+      buf += '*';
+      i++;
+      continue;
     }
 
     // ` inline code `
     if (text[i] === '`') {
       const end = text.indexOf('`', i + 1);
-      if (end !== -1) {
+      if (end > i + 1) {
         flush();
         parts.push(
           <code key={key++} className="rounded bg-zinc-800 px-1 py-0.5 text-xs font-mono text-zinc-200">
@@ -221,6 +228,9 @@ function parseInline(text: string): React.ReactNode[] {
         i = end + 1;
         continue;
       }
+      buf += '`';
+      i++;
+      continue;
     }
 
     // [link text](url)
@@ -241,6 +251,9 @@ function parseInline(text: string): React.ReactNode[] {
           continue;
         }
       }
+      buf += '[';
+      i++;
+      continue;
     }
 
     buf += text[i];
