@@ -1,13 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import type { WebSocket } from 'ws';
-import { createClerkClient } from '@clerk/backend';
+import fastifyWebsocket from '@fastify/websocket';
+import { verifyToken } from '@clerk/backend';
 import { eq } from 'drizzle-orm';
 import { env } from './env.js';
 import { redisSub, redis } from './redis.js';
 import { db } from './db/index.js';
 import { machines, agents, messages } from './db/schema/index.js';
-
-const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
 
 interface WsClient {
   ws: WebSocket;
@@ -46,64 +45,61 @@ redisSub.on('message', (redisChannel: string, data: string) => {
 });
 
 export async function registerWebSocket(app: FastifyInstance) {
-  await app.register(import('@fastify/websocket'));
+  await app.register(fastifyWebsocket);
 
-  app.get('/ws', { websocket: true }, async (socket, req) => {
-    // Auth: try JWT first, then API key
+  app.get('/ws', { websocket: true }, (socket, req) => {
     const token = (req.query as Record<string, string>).token;
     const apiKey = (req.query as Record<string, string>).apiKey;
 
     let userId: string | undefined;
     let machineId: string | undefined;
 
-    if (token) {
-      // Human auth via Clerk JWT
-      try {
-        const payload = await clerk.verifyToken(token);
-        userId = payload.sub;
-      } catch {
-        socket.close(4003, 'Invalid token');
-        return;
-      }
-    } else if (apiKey) {
-      // Machine auth via API key
-      const [machine] = await db
-        .select()
-        .from(machines)
-        .where(eq(machines.apiKey, apiKey))
-        .limit(1);
-
-      if (!machine) {
-        socket.close(4003, 'Invalid API key');
-        return;
-      }
-
-      machineId = machine.id;
-
-      // Update machine status to online
-      await db
-        .update(machines)
-        .set({ status: 'online', lastSeenAt: new Date() })
-        .where(eq(machines.id, machineId));
-
-      // Subscribe to machine command channel
-      const machineChannel = `machine:${machineId}`;
-      if (!redisSubscriptions.has(machineChannel)) {
-        await redisSub.subscribe(machineChannel);
-        redisSubscriptions.add(machineChannel);
-      }
-    } else {
-      socket.close(4001, 'Missing authentication');
-      return;
-    }
-
     const client: WsClient = { ws: socket, userId, machineId, channels: new Set() };
     clients.set(socket, client);
 
-    // Publish presence for human users
-    if (userId) {
-      await redis.publish('presence', JSON.stringify({ type: 'presence', userId, online: true }));
-    }
+    // Authenticate asynchronously
+    (async () => {
+      if (token) {
+        try {
+          const payload = await verifyToken(token, { secretKey: env.CLERK_SECRET_KEY });
+          client.userId = payload.sub;
+        } catch {
+          socket.close(4003, 'Invalid token');
+          return;
+        }
+      } else if (apiKey) {
+        const [machine] = await db
+          .select()
+          .from(machines)
+          .where(eq(machines.apiKey, apiKey))
+          .limit(1);
+
+        if (!machine) {
+          socket.close(4003, 'Invalid API key');
+          return;
+        }
+
+        client.machineId = machine.id;
+
+        await db
+          .update(machines)
+          .set({ status: 'online', lastSeenAt: new Date() })
+          .where(eq(machines.id, machine.id));
+
+        const machineChannel = `machine:${machine.id}`;
+        if (!redisSubscriptions.has(machineChannel)) {
+          await redisSub.subscribe(machineChannel);
+          redisSubscriptions.add(machineChannel);
+        }
+      } else {
+        socket.close(4001, 'Missing authentication');
+        return;
+      }
+
+      if (client.userId) {
+        await redis.publish('presence', JSON.stringify({ type: 'presence', userId: client.userId, online: true }));
+      }
+    })().catch(() => socket.close(4003, 'Auth error'));
 
     socket.on('message', async (raw: Buffer) => {
       try {
