@@ -6,6 +6,7 @@ import { messagesRouter } from './messages.js';
 import { agentsRouter } from './agents.js';
 import { devicesRouter } from './devices.js';
 import { machinesRouter } from './machines.js';
+import { channelItemsRouter } from './channel-items.js';
 
 export const appRouter = router({
   auth: authRouter,
@@ -15,6 +16,7 @@ export const appRouter = router({
   agents: agentsRouter,
   devices: devicesRouter,
   machines: machinesRouter,
+  channelItems: channelItemsRouter,
 });
 
 export type AppRouter = typeof appRouter;

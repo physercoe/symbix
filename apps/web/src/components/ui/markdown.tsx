@@ -2,6 +2,8 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -13,7 +15,8 @@ export function Markdown({ content, className }: Props) {
   return (
     <ReactMarkdown
       className={cn('prose-sm max-w-none break-words', className)}
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeKatex]}
       components={{
         pre: ({ children }) => (
           <pre className="my-2 rounded-md bg-zinc-900 p-3 overflow-x-auto">

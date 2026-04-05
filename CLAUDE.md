@@ -65,8 +65,11 @@ symbix/
 
 ### Dev Machine (Ubuntu 24, internal server)
 - **Role:** Run all services (Postgres, Redis, Mosquitto, dev servers), execute tests, build Docker images.
-- **No Claude Code** on this machine (privacy/safety). Developer operates manually or via scripts.
-- Code is synced via `git push` / `git pull` (or rsync if no git server).
+- **SSH access** available for read-only debugging (check DB, read logs, verify files).
+- **Do NOT** run `pnpm install`, `pnpm dev`, or install packages via SSH. User does this manually.
+- **Do NOT** start/stop/restart dev servers via SSH. User manages services manually.
+- **Postgres access:** `docker exec $(docker ps -q --filter 'name=postgres') psql -U postgres -d symbix -c "SQL"`
+- Code is synced via `git push` / `git pull`.
 
 ### Workflow
 ```
@@ -120,6 +123,8 @@ All in `apps/server/src/routes/`:
 ### `channels.ts`
 - `create`, `list` (by workspace), `getById`, `update`, `delete`
 - `addMember`, `removeMember`, `listMembers`
+- `openDM` — find or create DM channel between current user and an agent
+- `openUserDM` — find or create DM channel between two users (or self-DM "Notes")
 
 ### `messages.ts`
 - `send` — create message, broadcast via WS, trigger agent routing
@@ -174,6 +179,7 @@ User sends message → save to DB → broadcast via WS →
 
 ### Agent Response Rules
 - Agent responds if **@mentioned** by name, or if channel has `autoRespond: true` in agent's config
+- Agent **always auto-responds in DM channels** (no @mention needed)
 - Load last **50 messages** as context (configurable per agent)
 - Include agent's **persistent memory** (top-k relevant via vector similarity)
 - **Stream** response tokens to the channel in real-time
@@ -213,7 +219,7 @@ interface LLMProvider {
 - **Client components** (`'use client'`) for anything interactive (chat, forms, WS). Server components for static shells/layouts.
 - **No `useEffect` for data fetching.** Use tRPC `useQuery` / `useSuspenseQuery`.
 - **Zustand** for client-side state (messages, WS connection, typing indicators). One store per domain: `useMessageStore`, `useAgentStore`, `usePresenceStore`.
-- **shadcn/ui** for all UI primitives. Don't install other component libraries.
+- **shadcn/ui** for all UI primitives. Well-tested third-party libs (e.g. `react-markdown`) are OK when custom implementations prove fragile.
 - **Tailwind only** — no CSS modules, no styled-components, no inline `style={}`.
 - Responsive: **mobile-first** breakpoints (even though MVP is web, the layout should work at 375px+).
 
@@ -365,3 +371,36 @@ When building from scratch, create files in this order:
 - Do NOT add Material UI, Chakra UI, or Ant Design. We use shadcn/ui + Tailwind.
 - Do NOT write Python. Everything is TypeScript except `device-sdk` examples.
 - Do NOT implement real MQTT connections in MVP. Stub the physical agent gateway with mock data.
+- Do NOT install packages or run `pnpm install`/`pnpm dev` on the dev machine via SSH. Only edit code + package.json here, user runs install/dev manually.
+- Do NOT delete user data from the database without asking first.
+
+---
+
+## Key Implementation Notes
+
+### User ID Architecture
+- Clerk provides `clerkId` (e.g. `user_abc123`), stored in `users.clerk_id`
+- Internal UUID (`users.id`) is used everywhere in the DB (workspace_members, channel_members, messages.sender_id)
+- `ctx.userId` in tRPC context = **internal UUID** (resolved via `resolveUser()` in `trpc.ts`)
+- Clerk's `useUser().user.id` on the frontend = **Clerk ID**, not the internal UUID. Don't compare directly with DB user IDs.
+
+### Zustand Store Reactivity
+- Use `Record<string, T>` (plain objects), NOT `Map<string, T>` — Zustand's shallow comparison doesn't detect `new Map()` changes
+- Spread operator (`{ ...state.obj, [key]: val }`) triggers re-renders; `map.set()` does not
+
+### Streaming Pipeline
+- Worker → `redis.publish('channel:{id}', JSON)` → `redisSub.on('message')` → WS broadcast → client `agent-store` → UI
+- Worker runs in-process (same Node.js as Fastify), uses shared `redis` publisher connection
+- `agent_typing` events carry chunks; `new_message` event on completion clears streaming state
+
+### Markdown Rendering
+- Uses `react-markdown` + `remark-gfm` (community standard, 10M+ weekly downloads)
+- Custom component overrides in `apps/web/src/components/ui/markdown.tsx` for dark theme styling
+- Never use custom regex-based markdown parsers — they cause catastrophic backtracking and browser freezes
+
+### Additional tRPC Routes (beyond original spec)
+- `machines.register` / `machines.list` / `machines.getById` / `machines.update` / `machines.deregister`
+- `workspaces.listMembers` — lists workspace members with user name resolution; auto-inserts owner if missing
+- `channels.openDM` — find/create DM between user and agent
+- `channels.openUserDM` — find/create DM between users (or self-DM)
+- Agents have per-agent LLM config: `llmProvider`, `llmModel`, `llmBaseUrl`, `llmApiKey` columns

@@ -8,3 +8,5 @@ export * from './channel-members';
 export * from './messages';
 export * from './device-events';
 export * from './workspace-members';
+export * from './pinned-messages';
+export * from './channel-items';
