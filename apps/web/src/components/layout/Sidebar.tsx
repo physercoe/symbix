@@ -9,8 +9,10 @@ import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { CreateChannelDialog } from '@/components/channel/CreateChannelDialog';
+import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
 import { SpawnAgentDialog } from '@/components/agent/SpawnAgentDialog';
 
 const agentStatusDot: Record<string, string> = {
@@ -64,6 +66,12 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
   const [spawnOpen, setSpawnOpen] = useState(false);
   const { data: agents } = trpc.agents.list.useQuery({ workspaceId });
 
+  const openDM = trpc.channels.openDM.useMutation({
+    onSuccess: (channel) => {
+      router.push(`/workspaces/${workspaceId}/channels/${channel.id}`);
+    },
+  });
+
   return (
     <div className="mt-3">
       <div className="flex items-center justify-between px-2 py-1">
@@ -86,8 +94,9 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
         <button
           key={agent.id}
           type="button"
-          onClick={() => router.push(`/workspaces/${workspaceId}/settings`)}
+          onClick={() => openDM.mutate({ workspaceId, agentId: agent.id })}
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+          title={`Open DM with ${agent.name}`}
         >
           <div className={cn('h-2 w-2 rounded-full shrink-0', agentStatusDot[agent.status] ?? 'bg-gray-500')} />
           <span className="truncate">{agent.name}</span>
@@ -171,15 +180,25 @@ function ChannelGroup({
 export function Sidebar() {
   const params = useParams();
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useUser();
   const workspaceId = params.workspaceId as string | undefined;
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
 
   const { data: workspaces } = trpc.workspaces.list.useQuery();
+  const utils = trpc.useUtils();
   const { data: channels } = trpc.channels.list.useQuery(
     { workspaceId: workspaceId! },
     { enabled: !!workspaceId },
   );
+
+  const deleteWorkspace = trpc.workspaces.delete.useMutation({
+    onSuccess: () => {
+      utils.workspaces.list.invalidate();
+      router.push('/workspaces');
+    },
+  });
 
   const currentWorkspace = workspaces?.find((w) => w.id === workspaceId);
 
@@ -191,30 +210,92 @@ export function Sidebar() {
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-r">
       {/* Workspace selector */}
-      <div className="flex h-14 items-center justify-between border-b px-4">
-        {currentWorkspace ? (
-          <h2 className="text-sm font-semibold truncate">{currentWorkspace.name}</h2>
-        ) : (
-          <h2 className="text-sm font-semibold">Symbix</h2>
-        )}
-      </div>
-
-      {/* Workspace list links (other workspaces) */}
-      {workspaces && workspaces.length > 1 && (
-        <div className="border-b px-2 py-1">
-          {workspaces
-            .filter((w) => w.id !== workspaceId)
-            .map((w) => (
-              <Link
-                key={w.id}
-                href={`/workspaces/${w.id}`}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors truncate"
+      <div className="flex h-14 items-center justify-between border-b px-3">
+        <DropdownMenu
+          trigger={
+            <div className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-accent/50 transition-colors min-w-0 flex-1">
+              {currentWorkspace ? (
+                <>
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-semibold">
+                    {currentWorkspace.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-semibold truncate">{currentWorkspace.name}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 opacity-50">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm font-semibold">Symbix</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 opacity-50">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </>
+              )}
+            </div>
+          }
+        >
+          {/* Other workspaces */}
+          {workspaces && workspaces.length > 0 && (
+            <>
+              <p className="px-2 py-1 text-xs text-muted-foreground">Switch workspace</p>
+              {workspaces.map((w) => (
+                <DropdownMenuItem
+                  key={w.id}
+                  onClick={() => router.push(`/workspaces/${w.id}`)}
+                  className={cn(w.id === workspaceId && 'bg-accent')}
+                >
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground text-[10px] font-semibold mr-2">
+                    {w.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="truncate">{w.name}</span>
+                  {w.id === workspaceId && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-auto shrink-0">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </DropdownMenuItem>
+              ))}
+              <div className="my-1 h-px bg-border" />
+            </>
+          )}
+          <DropdownMenuItem onClick={() => setCreateWorkspaceOpen(true)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2 shrink-0">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Create workspace
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/workspaces')}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2 shrink-0">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+            All workspaces
+          </DropdownMenuItem>
+          {currentWorkspace && (
+            <>
+              <div className="my-1 h-px bg-border" />
+              <DropdownMenuItem
+                className="text-red-400 hover:text-red-300"
+                onClick={() => {
+                  if (confirm(`Delete workspace "${currentWorkspace.name}"? This will delete all channels, messages, and agents.`)) {
+                    deleteWorkspace.mutate({ id: currentWorkspace.id });
+                  }
+                }}
               >
-                <span className="truncate">{w.name}</span>
-              </Link>
-            ))}
-        </div>
-      )}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2 shrink-0">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Delete workspace
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenu>
+      </div>
 
       {/* Channel list + Agents */}
       <ScrollArea className="flex-1 px-2 py-2">
@@ -272,6 +353,9 @@ export function Sidebar() {
           onOpenChange={setCreateChannelOpen}
         />
       )}
+
+      {/* Create Workspace Dialog */}
+      <CreateWorkspaceDialog open={createWorkspaceOpen} onOpenChange={setCreateWorkspaceOpen} />
 
       {/* Settings link */}
       {workspaceId && (

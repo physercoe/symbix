@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { agents, channelMembers } from '../db/schema/index.js';
+import { agents, channels, channelMembers } from '../db/schema/index.js';
 import { agentResponseQueue } from './bull.js';
 
 export async function routeMessageToAgents(message: {
@@ -13,6 +13,14 @@ export async function routeMessageToAgents(message: {
   // Don't route agent messages (avoid loops)
   if (message.senderType === 'agent') return;
   if (!message.content) return;
+
+  // Check if this is a DM channel (agents always respond in DMs)
+  const [channel] = await db
+    .select()
+    .from(channels)
+    .where(eq(channels.id, message.channelId))
+    .limit(1);
+  const isDM = channel?.type === 'dm';
 
   // Find all agent members of this channel
   const agentMembers = await db
@@ -41,11 +49,11 @@ export async function routeMessageToAgents(message: {
     // Only auto-route for hosted bots — external agents receive messages via WS and decide themselves
     if (agent.agentType !== 'hosted_bot') continue;
 
-    // Check if agent is @mentioned or has autoRespond enabled
+    // In DM channels, always respond. Otherwise check @mention or autoRespond.
     const isMentioned = message.content.includes(`@${agent.name}`);
     const autoRespond = (agent.config as Record<string, unknown>)?.autoRespond === true;
 
-    if (isMentioned || autoRespond) {
+    if (isDM || isMentioned || autoRespond) {
       await agentResponseQueue.add('respond', {
         agentId: agent.id,
         channelId: message.channelId,

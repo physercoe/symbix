@@ -1,8 +1,8 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
-import { channels, channelMembers } from '../db/schema/index.js';
+import { channels, channelMembers, agents } from '../db/schema/index.js';
 import {
   createChannelSchema,
   updateChannelSchema,
@@ -133,5 +133,58 @@ export const channelsRouter = router({
         .select()
         .from(channelMembers)
         .where(eq(channelMembers.channelId, input.channelId));
+    }),
+
+  // Open or create a DM channel between the current user and an agent
+  openDM: protectedProcedure
+    .input(z.object({ workspaceId: z.string().uuid(), agentId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { workspaceId, agentId } = input;
+
+      // Look up the agent name
+      const [agent] = await ctx.db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, agentId))
+        .limit(1);
+      if (!agent) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+      }
+
+      // Find existing DM channel where both user and agent are members
+      const dmChannels = await ctx.db
+        .select()
+        .from(channels)
+        .where(and(eq(channels.workspaceId, workspaceId), eq(channels.type, 'dm')));
+
+      for (const ch of dmChannels) {
+        const members = await ctx.db
+          .select()
+          .from(channelMembers)
+          .where(eq(channelMembers.channelId, ch.id));
+        const hasUser = members.some((m) => m.memberType === 'user' && m.userId === ctx.userId);
+        const hasAgent = members.some((m) => m.memberType === 'agent' && m.agentId === agentId);
+        if (hasUser && hasAgent && members.length === 2) {
+          return ch;
+        }
+      }
+
+      // Create new DM channel
+      const [channel] = await ctx.db
+        .insert(channels)
+        .values({
+          workspaceId,
+          name: agent.name,
+          description: `DM with ${agent.name}`,
+          type: 'dm',
+        })
+        .returning();
+
+      await ctx.db.insert(channelMembers).values([
+        { channelId: channel.id, memberType: 'user' as const, userId: ctx.userId },
+        { channelId: channel.id, memberType: 'agent' as const, agentId },
+      ]);
+
+      return channel;
     }),
 });
