@@ -37,3 +37,7 @@ drizzle/meta/
 # Playwright
 test-results/
 playwright-report/
+
+# Docker images
+*.tar.gz
+docker-images/
