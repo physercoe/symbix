@@ -4,22 +4,32 @@ import { useEffect, useRef } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Markdown } from '@/components/ui/markdown';
 import type { Message } from '@symbix/shared';
+
+interface StreamingEntry {
+  agentId: string;
+  name: string;
+  content: string;
+}
 
 interface Props {
   messages: Message[];
   isLoading: boolean;
   senderNames?: Map<string, string>;
+  streaming?: StreamingEntry[];
 }
 
-export function MessageList({ messages, isLoading, senderNames }: Props) {
+export function MessageList({ messages, isLoading, senderNames, streaming }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages or streaming chunks arrive
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+  }, [messages.length, streaming]);
 
   if (isLoading) {
     return (
@@ -37,7 +47,7 @@ export function MessageList({ messages, isLoading, senderNames }: Props) {
     );
   }
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && (!streaming || streaming.length === 0)) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted-foreground">
         <p>No messages yet. Start the conversation!</p>
@@ -61,6 +71,37 @@ export function MessageList({ messages, isLoading, senderNames }: Props) {
               showHeader={showHeader}
               senderName={senderNames?.get(msg.senderId)}
             />
+          );
+        })}
+        {/* Streaming messages — shown inline as virtual messages */}
+        {streaming && streaming.map((s) => {
+          // Check if the last real message is from the same agent to decide header
+          const lastMsg = messages[messages.length - 1];
+          const showHeader = !lastMsg || lastMsg.senderId !== s.agentId || lastMsg.senderType !== 'agent';
+          return (
+            <div
+              key={`streaming-${s.agentId}`}
+              className="group flex gap-3 px-1 py-0.5 rounded"
+              style={!showHeader ? { paddingLeft: '3rem' } : undefined}
+            >
+              {showHeader && (
+                <Avatar
+                  size="sm"
+                  fallback={s.name[0]?.toUpperCase() ?? 'A'}
+                  className="bg-violet-500/20 shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                {showHeader && (
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-semibold text-violet-400">{s.name}</span>
+                    <Badge variant="secondary" className="text-[10px] px-1 py-0">Agent</Badge>
+                    <span className="text-xs text-muted-foreground animate-pulse">streaming...</span>
+                  </div>
+                )}
+                <Markdown content={s.content} className="text-sm" />
+              </div>
+            </div>
           );
         })}
         <div ref={bottomRef} />

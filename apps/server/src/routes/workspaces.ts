@@ -124,10 +124,34 @@ export const workspacesRouter = router({
   listMembers: protectedProcedure
     .input(z.object({ workspaceId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const members = await ctx.db
+      let members = await ctx.db
         .select()
         .from(workspaceMembers)
         .where(eq(workspaceMembers.workspaceId, input.workspaceId));
+
+      // Auto-add current user if they own the workspace but aren't in the members table
+      // (handles workspaces created before the members table was populated)
+      const currentUserIsMember = members.some((m) => m.userId === ctx.userId);
+      if (!currentUserIsMember) {
+        const [ws] = await ctx.db
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.id, input.workspaceId))
+          .limit(1);
+        if (ws && ws.ownerId === ctx.userId) {
+          await ctx.db.insert(workspaceMembers).values({
+            workspaceId: input.workspaceId,
+            memberType: 'user',
+            userId: ctx.userId,
+            role: 'owner',
+          }).onConflictDoNothing();
+          // Re-fetch
+          members = await ctx.db
+            .select()
+            .from(workspaceMembers)
+            .where(eq(workspaceMembers.workspaceId, input.workspaceId));
+        }
+      }
 
       // Resolve user names
       const result = [];

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { wsManager } from '@/lib/ws';
 import { useMessageStore } from '@/stores/message-store';
+import { useAgentStore } from '@/stores/agent-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover } from '@/components/ui/popover';
@@ -12,7 +13,6 @@ import { cn } from '@/lib/utils';
 import { AddAgentToChannelDialog } from '@/components/channel/AddAgentToChannelDialog';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
-import { TypingIndicator } from './TypingIndicator';
 
 const EMPTY_MESSAGES: never[] = [];
 
@@ -38,6 +38,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
   const { data: allAgents } = trpc.agents.list.useQuery({ workspaceId });
   const setMessages = useMessageStore((s) => s.setMessages);
   const messages = useMessageStore((s) => s.messages.get(channelId)) ?? EMPTY_MESSAGES;
+  const streaming = useAgentStore((s) => s.streaming);
   const utils = trpc.useUtils();
 
   const isDM = channel?.type === 'dm';
@@ -70,6 +71,22 @@ export function ChatView({ workspaceId, channelId }: Props) {
     return map;
   }, [allAgents]);
 
+  // Build streaming entries for current channel
+  const streamingEntries = useMemo(() => {
+    const entries: Array<{ agentId: string; name: string; content: string }> = [];
+    for (const [agentId, data] of Object.entries(streaming)) {
+      if (data.channelId === channelId && data.content) {
+        const agent = allAgents?.find((a) => a.id === agentId);
+        entries.push({
+          agentId,
+          name: agent?.name ?? agentId.slice(0, 8),
+          content: data.content,
+        });
+      }
+    }
+    return entries;
+  }, [streaming, channelId, allAgents]);
+
   // Sync fetched messages to store (only initial load)
   useEffect(() => {
     if (data?.messages) {
@@ -99,7 +116,6 @@ export function ChatView({ workspaceId, channelId }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Members button with popover */}
           <Popover
             open={membersOpen}
             onOpenChange={setMembersOpen}
@@ -122,7 +138,6 @@ export function ChatView({ workspaceId, channelId }: Props) {
                 <span className="text-xs text-muted-foreground">{totalMembers}</span>
               </div>
 
-              {/* Agent members */}
               {agentMembers.length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Agents</p>
@@ -158,7 +173,6 @@ export function ChatView({ workspaceId, channelId }: Props) {
                 </div>
               )}
 
-              {/* User members */}
               {userMembers.length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Users</p>
@@ -174,7 +188,6 @@ export function ChatView({ workspaceId, channelId }: Props) {
                 </div>
               )}
 
-              {/* Add agent — only for non-DM channels */}
               {!isDM && (
                 <>
                   <Separator />
@@ -204,11 +217,13 @@ export function ChatView({ workspaceId, channelId }: Props) {
         )}
       </div>
 
-      {/* Messages */}
-      <MessageList messages={messages} isLoading={isLoading} senderNames={senderNames} />
-
-      {/* Typing / Streaming indicator */}
-      <TypingIndicator channelId={channelId} workspaceId={workspaceId} />
+      {/* Messages + inline streaming */}
+      <MessageList
+        messages={messages}
+        isLoading={isLoading}
+        senderNames={senderNames}
+        streaming={streamingEntries}
+      />
 
       {/* Input */}
       <MessageInput channelId={channelId} workspaceId={workspaceId} />

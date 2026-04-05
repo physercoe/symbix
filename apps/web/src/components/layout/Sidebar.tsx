@@ -49,7 +49,7 @@ function MachineSection({ workspaceId }: { workspaceId: string }) {
         <button
           key={machine.id}
           type="button"
-          onClick={() => router.push(`/workspaces/${workspaceId}/settings`)}
+          onClick={() => router.push(`/workspaces/${workspaceId}/machines/${machine.id}`)}
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-60">

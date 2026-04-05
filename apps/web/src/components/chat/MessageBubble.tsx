@@ -1,5 +1,6 @@
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Markdown } from '@/components/ui/markdown';
 import { cn } from '@/lib/utils';
 import type { Message } from '@symbix/shared';
 
@@ -62,9 +63,9 @@ export function MessageBubble({ message, showHeader, senderName }: Props) {
             <span className="text-xs text-muted-foreground">{time}</span>
           </div>
         )}
-        <p className="text-sm whitespace-pre-wrap break-words">
-          {message.content}
-        </p>
+        {message.content && (
+          <Markdown content={message.content} className="text-sm" />
+        )}
       </div>
     </div>
   );
