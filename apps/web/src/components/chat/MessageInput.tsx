@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { wsManager } from '@/lib/ws';
 import { useMessageStore } from '@/stores/message-store';
@@ -113,22 +113,25 @@ export function MessageInput({ channelId, workspaceId }: Props) {
     }
   };
 
-  // Auto-resize textarea and detect @mention
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setContent(value);
-    handleTyping();
+  // Debounced auto-resize: avoid collapsing/expanding on every keystroke
+  const resizeRaf = useRef<number>(0);
+  const resizeTextarea = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    // Only recalc if needed — avoid expensive relayout on every char
+    cancelAnimationFrame(resizeRaf.current);
+    resizeRaf.current = requestAnimationFrame(() => {
+      el.style.height = 'auto';
+      const newHeight = Math.min(el.scrollHeight, 160);
+      el.style.height = newHeight + 'px';
+      el.style.overflowY = el.scrollHeight > 160 ? 'auto' : 'hidden';
+    });
+  }, []);
 
-    const el = e.target;
-    el.style.height = 'auto';
-    const newHeight = Math.min(el.scrollHeight, 160);
-    el.style.height = newHeight + 'px';
-    el.style.overflowY = el.scrollHeight > 160 ? 'auto' : 'hidden';
-
-    // Detect @mention
-    const cursorPos = el.selectionStart;
-    const textBeforeCursor = value.slice(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+  // Detect @mention — only check last 50 chars before cursor, not entire text
+  const detectMention = useCallback((value: string, cursorPos: number) => {
+    const lookback = value.slice(Math.max(0, cursorPos - 50), cursorPos);
+    const atMatch = lookback.match(/@(\w*)$/);
     if (atMatch) {
       setMentionStart(cursorPos - atMatch[0].length);
       setMentionQuery(atMatch[1]);
@@ -136,6 +139,14 @@ export function MessageInput({ channelId, workspaceId }: Props) {
     } else {
       setMentionQuery(null);
     }
+  }, []);
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setContent(value);
+    handleTyping();
+    resizeTextarea();
+    detectMention(value, e.target.selectionStart);
   };
 
   return (
