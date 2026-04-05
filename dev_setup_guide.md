@@ -119,13 +119,13 @@ docker compose version    # Expected: v2.x.x
 ```bash
 # Option A: From git remote
 cd ~
-git clone <your-git-remote-url> symbix
+git clone https://github.com/physercoe/symbix.git
 cd symbix
 
 # Option B: Via rsync from Claude Code machine (if no shared git server)
 # On the Claude Code machine, run:
 #   rsync -avz --exclude node_modules --exclude .next --exclude dist \
-#     /home/ubuntu/slockai/ devuser@dev-server:~/symbix/
+#     /home/ubuntu/symbix/ devuser@dev-server:~/symbix/
 ```
 
 ---
@@ -280,6 +280,7 @@ EOF
 ```bash
 cat > apps/web/.env.local << 'EOF'
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_REPLACE_ME
+CLERK_SECRET_KEY=sk_test_REPLACE_ME
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_WS_URL=ws://localhost:4000/ws
 EOF
@@ -391,27 +392,65 @@ ssh -L 3000:localhost:3000 -L 4000:localhost:4000 user@dev-server
 ```bash
 cd ~/symbix
 
-# Run all tests
+# Run all tests (Vitest)
 pnpm test
 
 # Run tests for a specific package
-pnpm --filter server test
-pnpm --filter web test
+pnpm --filter server test        # Agent router + response worker tests
+pnpm --filter web test           # Web component tests (when added)
 
 # Run with watch mode (during development)
-pnpm --filter server test:watch
-
-# E2E tests (Playwright — web only)
-# First time: install browsers
-pnpm --filter web exec playwright install --with-deps
-
-# Run E2E
-pnpm --filter web test:e2e
+pnpm --filter server exec vitest --watch
 ```
 
 ---
 
-## Step 13: Useful Commands Reference
+## Step 13: Machine & Agent Workflow
+
+Symbix uses a Machine → Agent hierarchy. Machines register first, then agents are spawned on them.
+
+### Register a machine (via the web UI)
+
+1. Open `http://localhost:3000` and sign in
+2. Create a workspace (or select existing)
+3. Go to **Settings** (gear icon in sidebar)
+4. Click **Add Machine**, enter a name and type
+5. Copy the connect command shown in the dialog
+
+### Connect a machine
+
+On the target machine (can be the same dev machine or another host):
+
+```bash
+# Using the API key from the web UI
+npx @symbix/agent-bridge connect sym_<your_api_key> --url ws://localhost:4000/ws
+
+# The bridge will:
+# ✓ Connect to Symbix via WebSocket
+# ✓ Report machine status (OS, CPU, memory)
+# ✓ Listen for spawn/stop commands from the web UI
+# ✓ Auto-reconnect if disconnected
+```
+
+### Spawn agents from the web UI
+
+1. In **Settings**, click **Add Agent**
+2. Choose **Hosted Bot** (LLM-powered, runs on server) or **Machine Agent** (runs on connected machine)
+3. For Machine Agent: select an online machine and adapter (Claude Code, Codex, subprocess)
+4. Add the agent to a channel via channel settings
+
+### Agent types
+
+| Type | Where it runs | How it connects |
+|------|--------------|-----------------|
+| `hosted_bot` | Symbix server (BullMQ worker) | Automatic — server manages LLM calls |
+| `cli_agent` | User's machine via agent-bridge | WebSocket via bridge daemon |
+| `cloud_agent` | Cloud service | Direct WebSocket with API key |
+| `device_agent` | Physical device (robot/IoT) | MQTT + device-sdk (future) |
+
+---
+
+## Step 14: Useful Commands Reference
 
 ```bash
 # ─── Monorepo ───
@@ -437,11 +476,15 @@ docker exec -it infra-postgres-1 psql -U postgres -d symbix   # Postgres shell
 docker exec -it infra-redis-1 redis-cli                        # Redis shell
 docker logs infra-mosquitto-1                                  # MQTT logs
 
+# ─── Agent Bridge ───
+npx @symbix/agent-bridge connect <apiKey>        # Connect machine to Symbix
+npx @symbix/agent-bridge connect <apiKey> --url ws://host:4000/ws  # Custom URL
+
 # ─── Code Sync (if using rsync instead of git) ───
 # Run on Claude Code machine:
 rsync -avz --delete \
   --exclude node_modules --exclude .next --exclude dist --exclude .env \
-  /home/ubuntu/slockai/ user@dev-server:~/symbix/
+  /home/ubuntu/symbix/ user@dev-server:~/symbix/
 ```
 
 ---
