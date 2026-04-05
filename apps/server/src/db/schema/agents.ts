@@ -1,12 +1,15 @@
 import { pgTable, uuid, varchar, text, jsonb, timestamp, integer } from 'drizzle-orm/pg-core';
 import { workspaces } from './workspaces.js';
+import { machines } from './machines.js';
 
 export const agents = pgTable('agents', {
   id: uuid('id').primaryKey().defaultRandom(),
   workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  machineId: uuid('machine_id').references(() => machines.id, { onDelete: 'set null' }),
   name: varchar('name', { length: 255 }).notNull(),
   avatarUrl: text('avatar_url'),
   agentClass: varchar('agent_class', { length: 20 }).notNull().default('software'),
+  agentType: varchar('agent_type', { length: 30 }).notNull().default('hosted_bot'),
   roleDescription: text('role_description').notNull(),
   systemPrompt: text('system_prompt').notNull(),
   llmProvider: varchar('llm_provider', { length: 50 }).notNull().default('anthropic'),

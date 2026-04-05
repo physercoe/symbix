@@ -31,3 +31,19 @@ export type SenderType = typeof SENDER_TYPES[number];
 // Channel member types
 export const MEMBER_TYPES = ['user', 'agent'] as const;
 export type MemberType = typeof MEMBER_TYPES[number];
+
+// Machine types
+export const MACHINE_TYPES = ['desktop', 'server', 'robot', 'browser', 'cloud'] as const;
+export type MachineType = typeof MACHINE_TYPES[number];
+
+// Machine statuses
+export const MACHINE_STATUSES = ['online', 'offline'] as const;
+export type MachineStatus = typeof MACHINE_STATUSES[number];
+
+// Agent types (how the agent is hosted/connected)
+export const AGENT_TYPES = ['hosted_bot', 'cli_agent', 'cloud_agent', 'device_agent'] as const;
+export type AgentType = typeof AGENT_TYPES[number];
+
+// Workspace roles
+export const WORKSPACE_ROLES = ['owner', 'member', 'observer'] as const;
+export type WorkspaceRole = typeof WORKSPACE_ROLES[number];

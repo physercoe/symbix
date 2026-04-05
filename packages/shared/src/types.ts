@@ -1,4 +1,4 @@
-import type { AgentClass, AgentStatus, ChannelType, ContentType, MemberType, SenderType } from './constants.js';
+import type { AgentClass, AgentStatus, AgentType, ChannelType, ContentType, MachineStatus, MachineType, MemberType, SenderType, WorkspaceRole } from './constants.js';
 
 export interface User {
   id: string;
@@ -26,12 +26,26 @@ export interface Channel {
   createdAt: string;
 }
 
+export interface Machine {
+  id: string;
+  workspaceId: string;
+  name: string;
+  machineType: MachineType;
+  apiKey: string;
+  status: MachineStatus;
+  metadata: Record<string, unknown>;
+  lastSeenAt: string | null;
+  createdAt: string;
+}
+
 export interface Agent {
   id: string;
   workspaceId: string;
   name: string;
   avatarUrl: string | null;
   agentClass: AgentClass;
+  agentType: AgentType;
+  machineId: string | null;
   roleDescription: string;
   systemPrompt: string;
   llmProvider: string;
@@ -64,6 +78,16 @@ export interface ChannelMember {
   memberType: MemberType;
   userId: string | null;
   agentId: string | null;
+  joinedAt: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspaceId: string;
+  memberType: MemberType;
+  userId: string | null;
+  agentId: string | null;
+  role: WorkspaceRole;
   joinedAt: string;
 }
 

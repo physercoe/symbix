@@ -38,6 +38,9 @@ export async function routeMessageToAgents(message: {
     if (!agent) continue;
     if (agent.status === 'disabled' || agent.status === 'error') continue;
 
+    // Only auto-route for hosted bots — external agents receive messages via WS and decide themselves
+    if (agent.agentType !== 'hosted_bot') continue;
+
     // Check if agent is @mentioned or has autoRespond enabled
     const isMentioned = message.content.includes(`@${agent.name}`);
     const autoRespond = (agent.config as Record<string, unknown>)?.autoRespond === true;

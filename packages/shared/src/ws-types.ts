@@ -55,3 +55,55 @@ export type ServerMessage =
   | AgentStatusEvent
   | AgentTelemetryEvent
   | PresenceEvent;
+
+// Machine → Symbix messages (from agent-bridge daemon)
+export interface AgentSpawnedMessage {
+  type: 'agent_spawned';
+  agentId: string;
+}
+
+export interface AgentStoppedMessage {
+  type: 'agent_stopped';
+  agentId: string;
+}
+
+export interface AgentMessageMessage {
+  type: 'agent_message';
+  agentId: string;
+  channelId: string;
+  content: string;
+}
+
+export interface MachineStatusMessage {
+  type: 'machine_status';
+  metadata: Record<string, unknown>;
+}
+
+export type MachineToServerMessage =
+  | AgentSpawnedMessage
+  | AgentStoppedMessage
+  | AgentMessageMessage
+  | MachineStatusMessage;
+
+// Symbix → Machine messages (commands to agent-bridge)
+export interface SpawnAgentCommand {
+  type: 'spawn_agent';
+  agentId: string;
+  config: Record<string, unknown>;
+}
+
+export interface StopAgentCommand {
+  type: 'stop_agent';
+  agentId: string;
+}
+
+export interface ChannelMessageCommand {
+  type: 'channel_message';
+  agentId: string;
+  message: Message;
+}
+
+export type ServerToMachineMessage =
+  | SpawnAgentCommand
+  | StopAgentCommand
+  | ChannelMessageCommand;

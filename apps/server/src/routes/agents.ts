@@ -7,6 +7,7 @@ import {
   createAgentSchema,
   updateAgentSchema,
   updateAgentMemorySchema,
+  spawnAgentSchema,
 } from '@symbix/shared';
 
 export const agentsRouter = router({
@@ -23,6 +24,8 @@ export const agentsRouter = router({
           llmProvider: input.llmProvider,
           llmModel: input.llmModel,
           agentClass: input.agentClass,
+          agentType: input.agentType,
+          machineId: input.machineId,
           config: input.config ?? {},
           capabilities: input.capabilities ?? [],
           status: 'sleeping',
@@ -171,5 +174,35 @@ export const agentsRouter = router({
         .returning();
 
       return updated;
+    }),
+
+  spawn: protectedProcedure
+    .input(spawnAgentSchema)
+    .mutation(async ({ ctx, input }) => {
+      const [agent] = await ctx.db
+        .insert(agents)
+        .values({
+          workspaceId: input.workspaceId,
+          name: input.name,
+          agentType: input.agentType,
+          machineId: input.machineId,
+          roleDescription: '',
+          systemPrompt: '',
+          config: input.config ?? {},
+          status: 'sleeping',
+        })
+        .returning();
+
+      // Send spawn command to the machine via Redis pub/sub
+      await ctx.redis.publish(
+        `machine:${input.machineId}`,
+        JSON.stringify({
+          type: 'spawn_agent',
+          agentId: agent.id,
+          config: { adapter: input.adapter, ...input.config },
+        }),
+      );
+
+      return agent;
     }),
 });
