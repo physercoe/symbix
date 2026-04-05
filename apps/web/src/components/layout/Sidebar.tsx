@@ -36,9 +36,8 @@ const machineStatusDot: Record<string, string> = {
   offline: 'bg-gray-500',
 };
 
-function MachineSection({ workspaceId }: { workspaceId: string }) {
+function MachineSection({ workspaceId, onAddMachine }: { workspaceId: string; onAddMachine: () => void }) {
   const router = useRouter();
-  const [addOpen, setAddOpen] = useState(false);
   const { data: machines } = trpc.machines.list.useQuery({ workspaceId });
 
   return (
@@ -49,7 +48,7 @@ function MachineSection({ workspaceId }: { workspaceId: string }) {
         </p>
         <button
           type="button"
-          onClick={() => setAddOpen(true)}
+          onClick={onAddMachine}
           className="text-muted-foreground hover:text-foreground transition-colors"
           title="Add machine"
         >
@@ -79,14 +78,12 @@ function MachineSection({ workspaceId }: { workspaceId: string }) {
       {(!machines || machines.length === 0) && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No machines yet</p>
       )}
-      <AddMachineDialog workspaceId={workspaceId} open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }
 
-function AgentSection({ workspaceId }: { workspaceId: string }) {
+function AgentSection({ workspaceId, onSpawnAgent }: { workspaceId: string; onSpawnAgent: () => void }) {
   const router = useRouter();
-  const [spawnOpen, setSpawnOpen] = useState(false);
   const { data: agents } = trpc.agents.list.useQuery({ workspaceId });
   const utils = trpc.useUtils();
 
@@ -105,7 +102,7 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
         </p>
         <button
           type="button"
-          onClick={() => setSpawnOpen(true)}
+          onClick={onSpawnAgent}
           className="text-muted-foreground hover:text-foreground transition-colors"
           title="Add agent"
         >
@@ -151,7 +148,6 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
       {(!agents || agents.length === 0) && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No agents yet</p>
       )}
-      <SpawnAgentDialog workspaceId={workspaceId} open={spawnOpen} onOpenChange={setSpawnOpen} />
     </div>
   );
 }
@@ -309,6 +305,8 @@ export function Sidebar() {
   const workspaceId = params.workspaceId as string | undefined;
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [addMachineOpen, setAddMachineOpen] = useState(false);
+  const [spawnAgentOpen, setSpawnAgentOpen] = useState(false);
 
   const { data: workspaces } = trpc.workspaces.list.useQuery();
   const utils = trpc.useUtils();
@@ -422,7 +420,7 @@ export function Sidebar() {
 
       {/* Channel list + Agents + Members */}
       <ScrollArea className="flex-1 px-2 py-2">
-        {workspaceId && channels ? (
+        {workspaceId ? (
           <>
             <ChannelGroup
               label="Channels"
@@ -456,16 +454,14 @@ export function Sidebar() {
               />
             )}
             <Separator className="my-2" />
-            <AgentSection workspaceId={workspaceId} />
-            <MachineSection workspaceId={workspaceId} />
+            <AgentSection workspaceId={workspaceId} onSpawnAgent={() => setSpawnAgentOpen(true)} />
+            <MachineSection workspaceId={workspaceId} onAddMachine={() => setAddMachineOpen(true)} />
             <MembersSection workspaceId={workspaceId} />
           </>
         ) : (
-          !workspaceId && (
-            <p className="px-2 py-2 text-xs text-muted-foreground">
-              Select a workspace to see channels.
-            </p>
-          )
+          <p className="px-2 py-2 text-xs text-muted-foreground">
+            Select a workspace to see channels.
+          </p>
         )}
       </ScrollArea>
 
@@ -475,6 +471,20 @@ export function Sidebar() {
           workspaceId={workspaceId}
           open={createChannelOpen}
           onOpenChange={setCreateChannelOpen}
+        />
+      )}
+
+      {/* Spawn Agent Dialog */}
+      {workspaceId && (
+        <SpawnAgentDialog workspaceId={workspaceId} open={spawnAgentOpen} onOpenChange={setSpawnAgentOpen} />
+      )}
+
+      {/* Add Machine Dialog */}
+      {workspaceId && (
+        <AddMachineDialog
+          workspaceId={workspaceId}
+          open={addMachineOpen}
+          onOpenChange={setAddMachineOpen}
         />
       )}
 

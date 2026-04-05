@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { Sidebar } from './Sidebar';
 import { Sheet } from '@/components/ui/sheet';
@@ -9,6 +9,35 @@ import { wsManager } from '@/lib/ws';
 import { useMessageStore } from '@/stores/message-store';
 import { useAgentStore } from '@/stores/agent-store';
 import { usePresenceStore } from '@/stores/presence-store';
+
+class SidebarErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: '' };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: error.message };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-full w-64 flex-col items-center justify-center bg-sidebar text-sidebar-foreground border-r p-4">
+          <p className="text-xs text-red-400 text-center">Sidebar error: {this.state.error}</p>
+          <button
+            className="mt-2 text-xs text-blue-400 hover:underline"
+            onClick={() => this.setState({ hasError: false, error: '' })}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function HamburgerIcon() {
   return (
@@ -110,12 +139,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar — always visible at md+ */}
       <div className="hidden md:flex">
-        <Sidebar />
+        <SidebarErrorBoundary>
+          <Sidebar />
+        </SidebarErrorBoundary>
       </div>
 
       {/* Mobile sidebar — rendered inside a Sheet drawer */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen} side="left">
-        <Sidebar />
+        <SidebarErrorBoundary>
+          <Sidebar />
+        </SidebarErrorBoundary>
       </Sheet>
 
       {/* Main content area */}
