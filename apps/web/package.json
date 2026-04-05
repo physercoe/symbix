@@ -11,13 +11,17 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.12.0",
+    "@clerk/themes": "^2.2.0",
+    "@radix-ui/react-slot": "^1.1.0",
     "@symbix/shared": "workspace:*",
     "@tanstack/react-query": "^5.67.0",
     "@trpc/client": "^11.0.0",
     "@trpc/react-query": "^11.0.0",
+    "clsx": "^2.1.0",
     "next": "^15.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.6.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
