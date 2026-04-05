@@ -1,5 +1,5 @@
 import { pgTable, uuid, varchar, jsonb, timestamp } from 'drizzle-orm/pg-core';
-import { agents } from './agents.js';
+import { agents } from './agents';
 
 export const deviceEvents = pgTable('device_events', {
   id: uuid('id').primaryKey().defaultRandom(),

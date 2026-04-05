@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, timestamp } from 'drizzle-orm/pg-core';
-import { channels } from './channels.js';
-import { users } from './users.js';
-import { agents } from './agents.js';
+import { channels } from './channels';
+import { users } from './users';
+import { agents } from './agents';
 
 export const channelMembers = pgTable('channel_members', {
   id: uuid('id').primaryKey().defaultRandom(),

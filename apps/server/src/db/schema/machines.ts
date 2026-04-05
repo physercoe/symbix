@@ -1,5 +1,5 @@
 import { pgTable, uuid, varchar, jsonb, timestamp } from 'drizzle-orm/pg-core';
-import { workspaces } from './workspaces.js';
+import { workspaces } from './workspaces';
 
 export const machines = pgTable('machines', {
   id: uuid('id').primaryKey().defaultRandom(),

@@ -8,7 +8,7 @@ import {
   unique,
   customType,
 } from 'drizzle-orm/pg-core';
-import { agents } from './agents.js';
+import { agents } from './agents';
 
 // pgvector column type — drizzle-orm/pg-core exposes `vector` in newer versions,
 // but we use a customType here for maximum compatibility with 0.38.x.

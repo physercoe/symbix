@@ -1,5 +1,5 @@
 import { pgTable, uuid, varchar, text, timestamp } from 'drizzle-orm/pg-core';
-import { workspaces } from './workspaces.js';
+import { workspaces } from './workspaces';
 
 export const channels = pgTable('channels', {
   id: uuid('id').primaryKey().defaultRandom(),
