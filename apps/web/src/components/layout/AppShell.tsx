@@ -36,7 +36,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const addMessage = useMessageStore((s) => s.addMessage);
   const setAgentStatus = useAgentStore((s) => s.setStatus);
-  const setAgentTyping = useAgentStore((s) => s.setTyping);
+  const appendChunk = useAgentStore((s) => s.appendChunk);
+  const clearStreaming = useAgentStore((s) => s.clearStreaming);
   const setOnline = usePresenceStore((s) => s.setOnline);
 
   useEffect(() => {
@@ -67,13 +68,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         };
       };
       if (d.message) {
+        // Clear streaming state when agent's final message arrives
+        if (d.message.senderType === 'agent') {
+          clearStreaming(d.message.senderId);
+        }
         addMessage(d.message.channelId, d.message);
       }
     };
 
     const onAgentTyping = (data: unknown) => {
       const d = data as { agentId: string; channelId: string; chunk: string };
-      setAgentTyping(d.agentId, d);
+      appendChunk(d.agentId, d.channelId, d.chunk);
     };
 
     const onAgentStatus = (data: unknown) => {
@@ -99,7 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       wsManager.off('presence', onPresence);
       wsManager.disconnect();
     };
-  }, [getToken, addMessage, setAgentStatus, setAgentTyping, setOnline]);
+  }, [getToken, addMessage, setAgentStatus, appendChunk, clearStreaming, setOnline]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

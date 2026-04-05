@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
-import { workspaces, channels, channelMembers, workspaceMembers } from '../db/schema/index.js';
+import { workspaces, channels, channelMembers, workspaceMembers, users } from '../db/schema/index.js';
 import {
   createWorkspaceSchema,
   updateWorkspaceSchema,
@@ -121,10 +121,35 @@ export const workspacesRouter = router({
       return { success: true };
     }),
 
+  listMembers: protectedProcedure
+    .input(z.object({ workspaceId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const members = await ctx.db
+        .select()
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.workspaceId, input.workspaceId));
+
+      // Resolve user names
+      const result = [];
+      for (const member of members) {
+        let userName: string | null = null;
+        if (member.userId) {
+          const [user] = await ctx.db
+            .select({ name: users.name })
+            .from(users)
+            .where(eq(users.id, member.userId))
+            .limit(1);
+          userName = user?.name ?? null;
+        }
+        result.push({ ...member, userName });
+      }
+      return result;
+    }),
+
   invite: protectedProcedure
     .input(inviteToWorkspaceSchema)
     .mutation(async () => {
-      // Stub — no workspace_members table yet
+      // Stub
       return { success: true };
     }),
 });

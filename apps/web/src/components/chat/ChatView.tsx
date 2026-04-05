@@ -38,11 +38,23 @@ export function ChatView({ workspaceId, channelId }: Props) {
   const { data: allAgents } = trpc.agents.list.useQuery({ workspaceId });
   const setMessages = useMessageStore((s) => s.setMessages);
   const messages = useMessageStore((s) => s.messages.get(channelId)) ?? EMPTY_MESSAGES;
+  const utils = trpc.useUtils();
+
+  const isDM = channel?.type === 'dm';
+
+  const removeMember = trpc.channels.removeMember.useMutation({
+    onSuccess: () => {
+      utils.channels.listMembers.invalidate({ channelId });
+    },
+  });
 
   const agentMembers = (members ?? [])
     .filter((m) => m.memberType === 'agent' && m.agentId)
-    .map((m) => allAgents?.find((a) => a.id === m.agentId))
-    .filter(Boolean);
+    .map((m) => {
+      const agent = allAgents?.find((a) => a.id === m.agentId);
+      return agent ? { ...agent, memberId: m.id } : null;
+    })
+    .filter(Boolean) as Array<{ id: string; name: string; status: string; agentType: string; memberId: string }>;
 
   const userMembers = (members ?? []).filter((m) => m.memberType === 'user');
   const totalMembers = (members ?? []).length;
@@ -61,7 +73,6 @@ export function ChatView({ workspaceId, channelId }: Props) {
   // Sync fetched messages to store (only initial load)
   useEffect(() => {
     if (data?.messages) {
-      // API returns newest-first, reverse for display (oldest first)
       setMessages(channelId, [...data.messages].reverse());
     }
   }, [data, channelId, setMessages]);
@@ -79,7 +90,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
       {/* Channel header */}
       <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center min-w-0">
-          <span className="text-muted-foreground mr-2">#</span>
+          <span className="text-muted-foreground mr-2">{isDM ? '@' : '#'}</span>
           <h2 className="font-semibold">{channel?.name ?? 'Loading...'}</h2>
           {channel?.description && (
             <span className="ml-3 text-sm text-muted-foreground truncate hidden sm:inline">
@@ -107,8 +118,8 @@ export function ChatView({ workspaceId, channelId }: Props) {
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">Channel Members</p>
-                <span className="text-xs text-muted-foreground">{totalMembers} total</span>
+                <p className="text-sm font-semibold">{isDM ? 'Conversation' : 'Channel Members'}</p>
+                <span className="text-xs text-muted-foreground">{totalMembers}</span>
               </div>
 
               {/* Agent members */}
@@ -117,14 +128,31 @@ export function ChatView({ workspaceId, channelId }: Props) {
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Agents</p>
                   {agentMembers.map((agent) => (
                     <div
-                      key={agent!.id}
-                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
+                      key={agent.id}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50 group"
                     >
-                      <div className={cn('h-2 w-2 rounded-full shrink-0', statusDotColor[agent!.status] ?? 'bg-gray-500')} />
-                      <span className="truncate">{agent!.name}</span>
-                      <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">
-                        {agent!.agentType === 'hosted_bot' ? 'Bot' : agent!.agentType}
+                      <div className={cn('h-2 w-2 rounded-full shrink-0', statusDotColor[agent.status] ?? 'bg-gray-500')} />
+                      <span className="truncate">{agent.name}</span>
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                        {agent.agentType === 'hosted_bot' ? 'Bot' : agent.agentType}
                       </Badge>
+                      {!isDM && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Remove ${agent.name} from this channel?`)) {
+                              removeMember.mutate({ channelId, memberId: agent.memberId });
+                            }
+                          }}
+                          className="ml-auto text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remove from channel"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -146,34 +174,40 @@ export function ChatView({ workspaceId, channelId }: Props) {
                 </div>
               )}
 
-              <Separator />
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => {
-                  setMembersOpen(false);
-                  setAddAgentOpen(true);
-                }}
-              >
-                + Add Agent
-              </Button>
+              {/* Add agent — only for non-DM channels */}
+              {!isDM && (
+                <>
+                  <Separator />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setMembersOpen(false);
+                      setAddAgentOpen(true);
+                    }}
+                  >
+                    + Add Agent
+                  </Button>
+                </>
+              )}
             </div>
           </Popover>
         </div>
-        <AddAgentToChannelDialog
-          workspaceId={workspaceId}
-          channelId={channelId}
-          open={addAgentOpen}
-          onOpenChange={setAddAgentOpen}
-        />
+        {!isDM && (
+          <AddAgentToChannelDialog
+            workspaceId={workspaceId}
+            channelId={channelId}
+            open={addAgentOpen}
+            onOpenChange={setAddAgentOpen}
+          />
+        )}
       </div>
 
       {/* Messages */}
       <MessageList messages={messages} isLoading={isLoading} senderNames={senderNames} />
 
-      {/* Typing indicator */}
+      {/* Typing / Streaming indicator */}
       <TypingIndicator channelId={channelId} workspaceId={workspaceId} />
 
       {/* Input */}

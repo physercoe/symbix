@@ -52,6 +52,11 @@ function MachineSection({ workspaceId }: { workspaceId: string }) {
           onClick={() => router.push(`/workspaces/${workspaceId}/settings`)}
           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
         >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-60">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
           <div className={cn('h-2 w-2 rounded-full shrink-0', machineStatusDot[machine.status] ?? 'bg-gray-500')} />
           <span className="truncate">{machine.name}</span>
           <span className="ml-auto text-[10px] opacity-60">{machine.machineType}</span>
@@ -65,9 +70,11 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
   const [spawnOpen, setSpawnOpen] = useState(false);
   const { data: agents } = trpc.agents.list.useQuery({ workspaceId });
+  const utils = trpc.useUtils();
 
   const openDM = trpc.channels.openDM.useMutation({
     onSuccess: (channel) => {
+      utils.channels.list.invalidate({ workspaceId });
       router.push(`/workspaces/${workspaceId}/channels/${channel.id}`);
     },
   });
@@ -91,24 +98,65 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
         </button>
       </div>
       {agents && agents.length > 0 && agents.map((agent) => (
-        <button
+        <div
           key={agent.id}
-          type="button"
-          onClick={() => openDM.mutate({ workspaceId, agentId: agent.id })}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
-          title={`Open DM with ${agent.name}`}
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground group"
         >
           <div className={cn('h-2 w-2 rounded-full shrink-0', agentStatusDot[agent.status] ?? 'bg-gray-500')} />
-          <span className="truncate">{agent.name}</span>
-          <span className="ml-auto text-[10px] opacity-60">
+          <button
+            type="button"
+            onClick={() => openDM.mutate({ workspaceId, agentId: agent.id })}
+            className="truncate hover:text-foreground transition-colors text-left"
+            title={`DM ${agent.name}`}
+          >
+            {agent.name}
+          </button>
+          <span className="text-[10px] opacity-60">
             {agentTypeLabel[agent.agentType] ?? agent.agentType}
           </span>
-        </button>
+          <button
+            type="button"
+            onClick={() => router.push(`/workspaces/${workspaceId}/settings`)}
+            className="ml-auto opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
+            title="Edit agent"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+        </div>
       ))}
       {(!agents || agents.length === 0) && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No agents yet</p>
       )}
       <SpawnAgentDialog workspaceId={workspaceId} open={spawnOpen} onOpenChange={setSpawnOpen} />
+    </div>
+  );
+}
+
+function MembersSection({ workspaceId }: { workspaceId: string }) {
+  const { data: members } = trpc.workspaces.listMembers.useQuery({ workspaceId });
+  const userMembers = members?.filter((m) => m.memberType === 'user') ?? [];
+  if (userMembers.length === 0) return null;
+
+  return (
+    <div className="mt-3">
+      <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Members
+      </p>
+      {userMembers.map((member) => (
+        <div
+          key={member.id}
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground"
+        >
+          <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+          <span className="truncate">{member.userName ?? 'User'}</span>
+          {member.role === 'owner' && (
+            <span className="ml-auto text-[10px] opacity-60">owner</span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -235,7 +283,6 @@ export function Sidebar() {
             </div>
           }
         >
-          {/* Other workspaces */}
           {workspaces && workspaces.length > 0 && (
             <>
               <p className="px-2 py-1 text-xs text-muted-foreground">Switch workspace</p>
@@ -297,7 +344,7 @@ export function Sidebar() {
         </DropdownMenu>
       </div>
 
-      {/* Channel list + Agents */}
+      {/* Channel list + Agents + Members */}
       <ScrollArea className="flex-1 px-2 py-2">
         {workspaceId && channels ? (
           <>
@@ -335,6 +382,7 @@ export function Sidebar() {
             <Separator className="my-2" />
             <AgentSection workspaceId={workspaceId} />
             <MachineSection workspaceId={workspaceId} />
+            <MembersSection workspaceId={workspaceId} />
           </>
         ) : (
           !workspaceId && (
