@@ -12,16 +12,29 @@ interface Props {
 const MAX_RENDER_LENGTH = 50_000;
 
 export function Markdown({ content, className }: Props) {
-  const blocks = useMemo(() => {
-    const text = content.length > MAX_RENDER_LENGTH
-      ? content.slice(0, MAX_RENDER_LENGTH) + '\n\n...(truncated)'
-      : content;
-    return parseBlocks(text);
+  const result = useMemo(() => {
+    try {
+      const text = content.length > MAX_RENDER_LENGTH
+        ? content.slice(0, MAX_RENDER_LENGTH) + '\n\n...(truncated)'
+        : content;
+      return { blocks: parseBlocks(text), error: false };
+    } catch {
+      return { blocks: [] as BlockType[], error: true };
+    }
   }, [content]);
+
+  // Fallback: render as plain preformatted text if parsing fails
+  if (result.error) {
+    return (
+      <div className={cn('prose-sm max-w-none whitespace-pre-wrap', className)}>
+        {content}
+      </div>
+    );
+  }
 
   return (
     <div className={cn('prose-sm max-w-none', className)}>
-      {blocks.map((block, i) => (
+      {result.blocks.map((block, i) => (
         <Block key={i} block={block} />
       ))}
     </div>
@@ -173,10 +186,15 @@ function InlineText({ text }: { text: string }) {
 }
 
 function parseInline(text: string): React.ReactNode[] {
+  // Safety: skip inline parsing for very long text
+  if (text.length > 10_000) return [text];
+
   const parts: React.ReactNode[] = [];
   let i = 0;
   let buf = '';
   let key = 0;
+  let iterations = 0;
+  const maxIterations = text.length * 2; // absolute safety bound
 
   const flush = () => {
     if (buf) {
@@ -186,6 +204,11 @@ function parseInline(text: string): React.ReactNode[] {
   };
 
   while (i < text.length) {
+    if (++iterations > maxIterations) {
+      // Safety bail — dump remaining text and stop
+      buf += text.slice(i);
+      break;
+    }
     // ** bold ** — need closing ** with content between
     if (text[i] === '*' && text[i + 1] === '*') {
       const end = text.indexOf('**', i + 2);
