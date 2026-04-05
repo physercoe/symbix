@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -7,19 +8,16 @@ interface Props {
   className?: string;
 }
 
-/**
- * Lightweight markdown renderer — supports:
- * - **bold**, *italic*, `inline code`
- * - ```code blocks```
- * - # headings (h1-h3)
- * - - bullet lists
- * - 1. numbered lists
- * - > blockquotes
- * - [links](url)
- * - line breaks
- */
+// Cap content length to prevent browser freeze on extremely long messages
+const MAX_RENDER_LENGTH = 50_000;
+
 export function Markdown({ content, className }: Props) {
-  const blocks = parseBlocks(content);
+  const blocks = useMemo(() => {
+    const text = content.length > MAX_RENDER_LENGTH
+      ? content.slice(0, MAX_RENDER_LENGTH) + '\n\n...(truncated)'
+      : content;
+    return parseBlocks(text);
+  }, [content]);
 
   return (
     <div className={cn('prose-sm max-w-none', className)}>
@@ -133,7 +131,7 @@ function Block({ block }: { block: BlockType }) {
     case 'code':
       return (
         <pre className="my-2 rounded-md bg-zinc-900 p-3 overflow-x-auto">
-          <code className="text-xs text-zinc-100 font-mono">{block.content}</code>
+          <code className="text-xs text-zinc-100 font-mono whitespace-pre-wrap break-words">{block.content}</code>
         </pre>
       );
     case 'heading': {
@@ -165,48 +163,90 @@ function Block({ block }: { block: BlockType }) {
   }
 }
 
+/**
+ * Iterative inline parser — avoids regex backtracking.
+ * Scans character by character for **, *, `, [link](url).
+ */
 function InlineText({ text }: { text: string }) {
-  // Parse inline markdown: **bold**, *italic*, `code`, [link](url)
+  const parts = useMemo(() => parseInline(text), [text]);
+  return <>{parts}</>;
+}
+
+function parseInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  // Regex for inline elements
-  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`|\[(.+?)\]\((.+?)\))/g;
-  let lastIndex = 0;
-  let match;
+  let i = 0;
+  let buf = '';
+  let key = 0;
 
-  while ((match = regex.exec(text)) !== null) {
-    // Add text before match
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+  const flush = () => {
+    if (buf) {
+      parts.push(buf);
+      buf = '';
+    }
+  };
+
+  while (i < text.length) {
+    // ** bold **
+    if (text[i] === '*' && text[i + 1] === '*') {
+      const end = text.indexOf('**', i + 2);
+      if (end !== -1) {
+        flush();
+        parts.push(<strong key={key++} className="font-semibold">{text.slice(i + 2, end)}</strong>);
+        i = end + 2;
+        continue;
+      }
     }
 
-    if (match[2]) {
-      // **bold**
-      parts.push(<strong key={match.index} className="font-semibold">{match[2]}</strong>);
-    } else if (match[3]) {
-      // *italic*
-      parts.push(<em key={match.index}>{match[3]}</em>);
-    } else if (match[4]) {
-      // `code`
-      parts.push(
-        <code key={match.index} className="rounded bg-zinc-800 px-1 py-0.5 text-xs font-mono text-zinc-200">
-          {match[4]}
-        </code>
-      );
-    } else if (match[5] && match[6]) {
-      // [link](url)
-      parts.push(
-        <a key={match.index} href={match[6]} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">
-          {match[5]}
-        </a>
-      );
+    // * italic *  (but not **)
+    if (text[i] === '*' && text[i + 1] !== '*') {
+      const end = text.indexOf('*', i + 1);
+      if (end !== -1 && end > i + 1) {
+        flush();
+        parts.push(<em key={key++}>{text.slice(i + 1, end)}</em>);
+        i = end + 1;
+        continue;
+      }
     }
 
-    lastIndex = match.index + match[0].length;
+    // ` inline code `
+    if (text[i] === '`') {
+      const end = text.indexOf('`', i + 1);
+      if (end !== -1) {
+        flush();
+        parts.push(
+          <code key={key++} className="rounded bg-zinc-800 px-1 py-0.5 text-xs font-mono text-zinc-200">
+            {text.slice(i + 1, end)}
+          </code>
+        );
+        i = end + 1;
+        continue;
+      }
+    }
+
+    // [link text](url)
+    if (text[i] === '[') {
+      const closeBracket = text.indexOf(']', i + 1);
+      if (closeBracket !== -1 && text[closeBracket + 1] === '(') {
+        const closeParen = text.indexOf(')', closeBracket + 2);
+        if (closeParen !== -1) {
+          const linkText = text.slice(i + 1, closeBracket);
+          const url = text.slice(closeBracket + 2, closeParen);
+          flush();
+          parts.push(
+            <a key={key++} href={url} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">
+              {linkText}
+            </a>
+          );
+          i = closeParen + 1;
+          continue;
+        }
+      }
+    }
+
+    buf += text[i];
+    i++;
   }
 
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  return <>{parts.length > 0 ? parts : text}</>;
+  flush();
+  return parts;
 }

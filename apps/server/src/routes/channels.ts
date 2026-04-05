@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
-import { channels, channelMembers, agents } from '../db/schema/index.js';
+import { channels, channelMembers, agents, users } from '../db/schema/index.js';
 import {
   createChannelSchema,
   updateChannelSchema,
@@ -183,6 +183,61 @@ export const channelsRouter = router({
       await ctx.db.insert(channelMembers).values([
         { channelId: channel.id, memberType: 'user' as const, userId: ctx.userId },
         { channelId: channel.id, memberType: 'agent' as const, agentId },
+      ]);
+
+      return channel;
+    }),
+
+  openUserDM: protectedProcedure
+    .input(z.object({ workspaceId: z.string().uuid(), targetUserId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { workspaceId, targetUserId } = input;
+
+      if (targetUserId === ctx.userId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cannot DM yourself' });
+      }
+
+      // Look up target user name
+      const [targetUser] = await ctx.db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, targetUserId))
+        .limit(1);
+
+      const targetName = targetUser?.name ?? 'User';
+
+      // Find existing DM channel between these two users
+      const dmChannels = await ctx.db
+        .select()
+        .from(channels)
+        .where(and(eq(channels.workspaceId, workspaceId), eq(channels.type, 'dm')));
+
+      for (const ch of dmChannels) {
+        const members = await ctx.db
+          .select()
+          .from(channelMembers)
+          .where(eq(channelMembers.channelId, ch.id));
+        const hasCurrentUser = members.some((m) => m.memberType === 'user' && m.userId === ctx.userId);
+        const hasTargetUser = members.some((m) => m.memberType === 'user' && m.userId === targetUserId);
+        if (hasCurrentUser && hasTargetUser && members.length === 2) {
+          return ch;
+        }
+      }
+
+      // Create new DM channel
+      const [channel] = await ctx.db
+        .insert(channels)
+        .values({
+          workspaceId,
+          name: targetName,
+          description: `DM with ${targetName}`,
+          type: 'dm',
+        })
+        .returning();
+
+      await ctx.db.insert(channelMembers).values([
+        { channelId: channel.id, memberType: 'user' as const, userId: ctx.userId },
+        { channelId: channel.id, memberType: 'user' as const, userId: targetUserId },
       ]);
 
       return channel;

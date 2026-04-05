@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { CreateChannelDialog } from '@/components/channel/CreateChannelDialog';
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
 import { SpawnAgentDialog } from '@/components/agent/SpawnAgentDialog';
+import { AddMachineDialog } from '@/components/machine/AddMachineDialog';
 
 const agentStatusDot: Record<string, string> = {
   active: 'bg-green-500',
@@ -37,15 +38,28 @@ const machineStatusDot: Record<string, string> = {
 
 function MachineSection({ workspaceId }: { workspaceId: string }) {
   const router = useRouter();
+  const [addOpen, setAddOpen] = useState(false);
   const { data: machines } = trpc.machines.list.useQuery({ workspaceId });
-  if (!machines || machines.length === 0) return null;
 
   return (
     <div className="mt-3">
-      <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-        Machines
-      </p>
-      {machines.map((machine) => (
+      <div className="flex items-center justify-between px-2 py-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Machines
+        </p>
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          title="Add machine"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </button>
+      </div>
+      {machines && machines.length > 0 && machines.map((machine) => (
         <button
           key={machine.id}
           type="button"
@@ -62,6 +76,10 @@ function MachineSection({ workspaceId }: { workspaceId: string }) {
           <span className="ml-auto text-[10px] opacity-60">{machine.machineType}</span>
         </button>
       ))}
+      {(!machines || machines.length === 0) && (
+        <p className="px-2 py-1 text-xs text-muted-foreground">No machines yet</p>
+      )}
+      <AddMachineDialog workspaceId={workspaceId} open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }
@@ -139,10 +157,20 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
 }
 
 function MembersSection({ workspaceId }: { workspaceId: string }) {
+  const router = useRouter();
   const [inviteEmail, setInviteEmail] = useState('');
   const [showInvite, setShowInvite] = useState(false);
   const { data: members } = trpc.workspaces.listMembers.useQuery({ workspaceId });
+  const { user: currentUser } = useUser();
+  const utils = trpc.useUtils();
   const userMembers = members?.filter((m) => m.memberType === 'user') ?? [];
+
+  const openUserDM = trpc.channels.openUserDM.useMutation({
+    onSuccess: (channel) => {
+      utils.channels.list.invalidate({ workspaceId });
+      router.push(`/workspaces/${workspaceId}/channels/${channel.id}`);
+    },
+  });
 
   return (
     <div className="mt-3">
@@ -176,18 +204,32 @@ function MembersSection({ workspaceId }: { workspaceId: string }) {
           />
         </div>
       )}
-      {userMembers.map((member) => (
-        <div
-          key={member.id}
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground"
-        >
-          <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
-          <span className="truncate">{member.userName ?? 'User'}</span>
-          {member.role === 'owner' && (
-            <span className="ml-auto text-[10px] opacity-60">owner</span>
-          )}
-        </div>
-      ))}
+      {userMembers.map((member) => {
+        const isCurrentUser = member.userId === currentUser?.id;
+        return (
+          <div
+            key={member.id}
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground group"
+          >
+            <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+            {isCurrentUser ? (
+              <span className="truncate">{member.userName ?? 'You'} (you)</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => member.userId && openUserDM.mutate({ workspaceId, targetUserId: member.userId })}
+                className="truncate hover:text-foreground transition-colors text-left"
+                title={`DM ${member.userName ?? 'User'}`}
+              >
+                {member.userName ?? 'User'}
+              </button>
+            )}
+            {member.role === 'owner' && (
+              <span className="ml-auto text-[10px] opacity-60">owner</span>
+            )}
+          </div>
+        );
+      })}
       {userMembers.length === 0 && (
         <p className="px-2 py-1 text-xs text-muted-foreground">No members</p>
       )}
