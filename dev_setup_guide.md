@@ -298,11 +298,11 @@ EOF
 ```bash
 # Run Drizzle migrations
 cd ~/symbix
-pnpm --filter server drizzle-kit migrate
+pnpm --filter server db:migrate
 
 # If the schema hasn't been generated yet (first time), generate first:
-pnpm --filter server drizzle-kit generate
-pnpm --filter server drizzle-kit migrate
+pnpm --filter server db:generate
+pnpm --filter server db:migrate
 
 # Verify tables exist
 docker exec -it infra-postgres-1 psql -U postgres -d symbix -c "\dt"
@@ -461,9 +461,9 @@ pnpm lint                              # Lint everything
 pnpm typecheck                         # TypeScript check all packages
 
 # ─── Database ───
-pnpm --filter server drizzle-kit generate   # Generate migration from schema changes
-pnpm --filter server drizzle-kit migrate    # Apply migrations
-pnpm --filter server drizzle-kit studio     # Visual DB browser (http://localhost:4983)
+pnpm --filter server db:generate   # Generate migration from schema changes
+pnpm --filter server db:migrate    # Apply migrations
+pnpm --filter server db:studio     # Visual DB browser (http://localhost:4983)
 
 # ─── Docker / Infra ───
 cd infra && docker compose up -d            # Start services

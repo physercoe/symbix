@@ -97,10 +97,10 @@ Use Drizzle ORM. Schema files live in `apps/server/src/db/schema/`.
 ### Migrations
 ```bash
 # Generate migration after schema change
-pnpm --filter server drizzle-kit generate
+pnpm --filter server db:generate
 
 # Apply migrations on dev machine
-pnpm --filter server drizzle-kit migrate
+pnpm --filter server db:migrate
 ```
 
 ---
