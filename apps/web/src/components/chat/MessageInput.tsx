@@ -53,6 +53,7 @@ export function MessageInput({ channelId, workspaceId }: Props) {
       setContent('');
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.overflowY = 'hidden';
       }
     },
   });
@@ -120,7 +121,9 @@ export function MessageInput({ channelId, workspaceId }: Props) {
 
     const el = e.target;
     el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+    const newHeight = Math.min(el.scrollHeight, 160);
+    el.style.height = newHeight + 'px';
+    el.style.overflowY = el.scrollHeight > 160 ? 'auto' : 'hidden';
 
     // Detect @mention
     const cursorPos = el.selectionStart;
@@ -171,7 +174,7 @@ export function MessageInput({ channelId, workspaceId }: Props) {
             onKeyDown={handleKeyDown}
             placeholder="Type a message... (@ to mention an agent)"
             rows={1}
-            className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 overflow-hidden"
           />
           <Button
             onClick={handleSubmit}

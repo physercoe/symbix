@@ -116,7 +116,10 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
           </span>
           <button
             type="button"
-            onClick={() => router.push(`/workspaces/${workspaceId}/settings`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/workspaces/${workspaceId}/agents/${agent.id}`);
+            }}
             className="ml-auto opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all"
             title="Edit agent"
           >
@@ -136,15 +139,43 @@ function AgentSection({ workspaceId }: { workspaceId: string }) {
 }
 
 function MembersSection({ workspaceId }: { workspaceId: string }) {
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [showInvite, setShowInvite] = useState(false);
   const { data: members } = trpc.workspaces.listMembers.useQuery({ workspaceId });
   const userMembers = members?.filter((m) => m.memberType === 'user') ?? [];
-  if (userMembers.length === 0) return null;
 
   return (
     <div className="mt-3">
-      <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-        Members
-      </p>
+      <div className="flex items-center justify-between px-2 py-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Members
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowInvite(!showInvite)}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          title="Invite member"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="19" y1="8" x2="19" y2="14" />
+            <line x1="16" y1="11" x2="22" y2="11" />
+          </svg>
+        </button>
+      </div>
+      {showInvite && (
+        <div className="px-2 py-1">
+          <p className="text-xs text-muted-foreground mb-1">Invite by email (coming soon)</p>
+          <input
+            type="email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            placeholder="user@example.com"
+            className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+      )}
       {userMembers.map((member) => (
         <div
           key={member.id}
@@ -157,6 +188,9 @@ function MembersSection({ workspaceId }: { workspaceId: string }) {
           )}
         </div>
       ))}
+      {userMembers.length === 0 && (
+        <p className="px-2 py-1 text-xs text-muted-foreground">No members</p>
+      )}
     </div>
   );
 }

@@ -88,6 +88,14 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
     })),
   ];
 
+  // Log context being sent
+  console.log(`[agent ${agent.name}] Context: ${chatMessages.length} msgs (1 system + ${chatMessages.length - 1} history) → ${agent.llmProvider}/${agent.llmModel}`);
+  console.log(`[agent ${agent.name}] System prompt: ${chatMessages[0].content.slice(0, 200)}...`);
+  if (chatMessages.length > 1) {
+    const last = chatMessages[chatMessages.length - 1];
+    console.log(`[agent ${agent.name}] Last msg (${last.role}): ${last.content.slice(0, 200)}`);
+  }
+
   // 6. Stream LLM response
   let fullResponse = '';
 
@@ -100,12 +108,14 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
       messages: chatMessages,
     });
 
+    let chunkCount = 0;
     for await (const chunk of stream) {
       if (chunk.type === 'text' && chunk.text) {
         fullResponse += chunk.text;
+        chunkCount++;
 
         // Publish streaming chunk for real-time display
-        await redis.publish(
+        const published = await redis.publish(
           `channel:${channelId}`,
           JSON.stringify({
             type: 'agent_typing',
@@ -114,8 +124,12 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
             chunk: chunk.text,
           }),
         );
+        if (chunkCount === 1) {
+          console.log(`[streaming] First chunk for agent ${agentId} in channel ${channelId}, subscribers: ${published}`);
+        }
       }
     }
+    console.log(`[streaming] Done: ${chunkCount} chunks, ${fullResponse.length} chars`);
   } catch (err) {
     console.error(`LLM error for agent ${agentId}:`, err);
     console.error(`Agent LLM config: provider=${agent.llmProvider}, model=${agent.llmModel}, baseUrl=${agent.llmBaseUrl}, hasApiKey=${!!agent.llmApiKey}, hasEnvKey=${agent.llmProvider === 'anthropic' ? !!env.ANTHROPIC_API_KEY : !!env.OPENAI_API_KEY}`);
