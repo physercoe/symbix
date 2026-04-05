@@ -1,28 +1,33 @@
 'use client';
 
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
+interface AgentData {
+  id: string;
+  workspaceId: string;
+  name: string;
+  agentType: string;
+  status: string;
+  roleDescription: string;
+  systemPrompt: string;
+  llmProvider: string;
+  llmModel: string;
+  llmBaseUrl: string | null;
+  llmApiKey: string | null;
+  machineId: string | null;
+  config: Record<string, unknown>;
+  capabilities: string[];
+  createdAt: string;
+}
+
 interface Props {
-  agent: {
-    id: string;
-    workspaceId: string;
-    name: string;
-    agentType: string;
-    status: string;
-    roleDescription: string;
-    systemPrompt: string;
-    llmProvider: string;
-    llmModel: string;
-    llmBaseUrl: string | null;
-    llmApiKey: string | null;
-    machineId: string | null;
-    capabilities: string[];
-    createdAt: string;
-  };
+  agent: AgentData;
   onClose: () => void;
 }
 
@@ -35,8 +40,25 @@ const statusColors: Record<string, string> = {
 };
 
 export function AgentPanel({ agent, onClose }: Props) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(agent.name);
+  const [roleDescription, setRoleDescription] = useState(agent.roleDescription);
+  const [systemPrompt, setSystemPrompt] = useState(agent.systemPrompt);
+  const [llmProvider, setLlmProvider] = useState(agent.llmProvider);
+  const [llmModel, setLlmModel] = useState(agent.llmModel);
+  const [llmBaseUrl, setLlmBaseUrl] = useState(agent.llmBaseUrl ?? '');
+  const [llmApiKey, setLlmApiKey] = useState(agent.llmApiKey ?? '');
+  const [autoRespond, setAutoRespond] = useState(
+    (agent.config as Record<string, unknown>)?.autoRespond === true,
+  );
   const utils = trpc.useUtils();
 
+  const updateAgent = trpc.agents.update.useMutation({
+    onSuccess: () => {
+      utils.agents.list.invalidate({ workspaceId: agent.workspaceId });
+      setEditing(false);
+    },
+  });
   const wake = trpc.agents.wake.useMutation({
     onSuccess: () => utils.agents.list.invalidate({ workspaceId: agent.workspaceId }),
   });
@@ -49,6 +71,118 @@ export function AgentPanel({ agent, onClose }: Props) {
       onClose();
     },
   });
+
+  const handleSave = () => {
+    updateAgent.mutate({
+      id: agent.id,
+      name: name.trim(),
+      roleDescription: roleDescription.trim(),
+      systemPrompt: systemPrompt.trim(),
+      llmProvider,
+      llmModel,
+      llmBaseUrl: llmBaseUrl.trim() || undefined,
+      llmApiKey: llmApiKey.trim() || undefined,
+      config: { ...agent.config, autoRespond },
+    });
+  };
+
+  if (editing) {
+    return (
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-sm">Edit Agent</h4>
+          <button onClick={() => setEditing(false)} className="text-muted-foreground hover:text-foreground text-sm">
+            Cancel
+          </button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Name</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Role description</label>
+            <Input value={roleDescription} onChange={(e) => setRoleDescription(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">System prompt</label>
+            <textarea
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          {agent.agentType === 'hosted_bot' && (
+            <>
+              <Separator />
+              <p className="text-xs font-medium">LLM Configuration</p>
+              <div>
+                <label className="text-xs text-muted-foreground">Provider</label>
+                <select
+                  value={llmProvider}
+                  onChange={(e) => {
+                    setLlmProvider(e.target.value);
+                    if (e.target.value === 'anthropic' && llmModel.startsWith('gpt')) {
+                      setLlmModel('claude-sonnet-4-20250514');
+                    } else if (e.target.value === 'openai' && llmModel.startsWith('claude')) {
+                      setLlmModel('gpt-4o');
+                    }
+                  }}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="openai">OpenAI / Compatible</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Model</label>
+                <Input value={llmModel} onChange={(e) => setLlmModel(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Base URL (optional)</label>
+                <Input
+                  value={llmBaseUrl}
+                  onChange={(e) => setLlmBaseUrl(e.target.value)}
+                  placeholder="https://api.openai.com/v1"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">API Key (optional, falls back to server default)</label>
+                <Input
+                  type="password"
+                  value={llmApiKey}
+                  onChange={(e) => setLlmApiKey(e.target.value)}
+                  placeholder="sk-..."
+                />
+              </div>
+            </>
+          )}
+          <Separator />
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="auto-respond"
+              checked={autoRespond}
+              onChange={(e) => setAutoRespond(e.target.checked)}
+              className="rounded border-input"
+            />
+            <label htmlFor="auto-respond" className="text-xs">
+              Auto-respond to all messages (no @mention needed)
+            </label>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          className="w-full"
+          onClick={handleSave}
+          disabled={!name.trim() || updateAgent.isPending}
+        >
+          {updateAgent.isPending ? 'Saving...' : 'Save'}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
@@ -64,6 +198,9 @@ export function AgentPanel({ agent, onClose }: Props) {
           {agent.status}
         </Badge>
         <Badge variant="secondary" className="text-xs">{agent.agentType}</Badge>
+        {(agent.config as Record<string, unknown>)?.autoRespond === true && (
+          <Badge variant="secondary" className="text-xs">auto-respond</Badge>
+        )}
       </div>
 
       {agent.roleDescription && (
@@ -98,12 +235,14 @@ export function AgentPanel({ agent, onClose }: Props) {
 
       <Separator />
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
+        <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+          Edit
+        </Button>
         {agent.status === 'sleeping' || agent.status === 'offline' ? (
           <Button
             size="sm"
             variant="outline"
-            className="flex-1"
             onClick={() => wake.mutate({ id: agent.id })}
             disabled={wake.isPending}
           >
@@ -113,7 +252,6 @@ export function AgentPanel({ agent, onClose }: Props) {
           <Button
             size="sm"
             variant="outline"
-            className="flex-1"
             onClick={() => sleep.mutate({ id: agent.id })}
             disabled={sleep.isPending}
           >

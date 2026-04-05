@@ -27,6 +27,34 @@ const agentTypeLabel: Record<string, string> = {
   device_agent: 'Device',
 };
 
+const machineStatusDot: Record<string, string> = {
+  online: 'bg-green-500',
+  offline: 'bg-gray-500',
+};
+
+function MachineSection({ workspaceId }: { workspaceId: string }) {
+  const { data: machines } = trpc.machines.list.useQuery({ workspaceId });
+  if (!machines || machines.length === 0) return null;
+
+  return (
+    <div className="mt-3">
+      <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Machines
+      </p>
+      {machines.map((machine) => (
+        <div
+          key={machine.id}
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground"
+        >
+          <div className={cn('h-2 w-2 rounded-full shrink-0', machineStatusDot[machine.status] ?? 'bg-gray-500')} />
+          <span className="truncate">{machine.name}</span>
+          <span className="ml-auto text-[10px] opacity-60">{machine.machineType}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AgentSection({ workspaceId }: { workspaceId: string }) {
   const { data: agents } = trpc.agents.list.useQuery({ workspaceId });
   if (!agents || agents.length === 0) return null;
@@ -173,6 +201,7 @@ export function Sidebar() {
               workspaceId={workspaceId}
               pathname={pathname}
             />
+            <MachineSection workspaceId={workspaceId} />
             <AgentSection workspaceId={workspaceId} />
           </>
         ) : (
