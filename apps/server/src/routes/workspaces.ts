@@ -2,7 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
-import { workspaces } from '../db/schema/index.js';
+import { workspaces, channels, channelMembers, workspaceMembers } from '../db/schema/index.js';
 import {
   createWorkspaceSchema,
   updateWorkspaceSchema,
@@ -17,6 +17,34 @@ export const workspacesRouter = router({
         .insert(workspaces)
         .values({ name: input.name, ownerId: ctx.userId })
         .returning();
+
+      // Add creator as workspace member
+      await ctx.db.insert(workspaceMembers).values({
+        workspaceId: workspace.id,
+        memberType: 'user',
+        userId: ctx.userId,
+        role: 'owner',
+      });
+
+      // Create default channels and add creator to each
+      const defaultChannels = [
+        { name: 'general', description: 'General discussion', type: 'public' },
+        { name: 'random', description: 'Off-topic chat', type: 'public' },
+      ];
+
+      for (const ch of defaultChannels) {
+        const [channel] = await ctx.db
+          .insert(channels)
+          .values({ workspaceId: workspace.id, ...ch })
+          .returning();
+
+        await ctx.db.insert(channelMembers).values({
+          channelId: channel.id,
+          memberType: 'user',
+          userId: ctx.userId,
+        });
+      }
+
       return workspace;
     }),
 

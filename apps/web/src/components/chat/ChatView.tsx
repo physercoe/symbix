@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { trpc } from '@/lib/trpc';
 import { wsManager } from '@/lib/ws';
 import { useMessageStore } from '@/stores/message-store';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { TypingIndicator } from './TypingIndicator';
+
+const EMPTY_MESSAGES: never[] = [];
 
 interface Props {
   channelId: string;
@@ -16,7 +18,7 @@ export function ChatView({ channelId }: Props) {
   const { data: channel } = trpc.channels.getById.useQuery({ id: channelId });
   const { data, isLoading } = trpc.messages.list.useQuery({ channelId, limit: 50 });
   const setMessages = useMessageStore((s) => s.setMessages);
-  const messages = useMessageStore((s) => s.messages.get(channelId) ?? []);
+  const messages = useMessageStore((s) => s.messages.get(channelId)) ?? EMPTY_MESSAGES;
 
   // Sync fetched messages to store (only initial load)
   useEffect(() => {
