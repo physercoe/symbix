@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { CreateChannelDialog } from '@/components/channel/CreateChannelDialog';
 
 function ChannelIcon({ type }: { type: string }) {
   if (type === 'dm') return <span className="text-muted-foreground">@</span>;
@@ -60,6 +62,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user } = useUser();
   const workspaceId = params.workspaceId as string | undefined;
+  const [createChannelOpen, setCreateChannelOpen] = useState(false);
 
   const { data: workspaces } = trpc.workspaces.list.useQuery();
   const { data: channels } = trpc.channels.list.useQuery(
@@ -144,16 +147,40 @@ export function Sidebar() {
       {workspaceId && (
         <div className="px-3 py-2">
           <Button
-            asChild
             variant="ghost"
             size="sm"
             className="w-full justify-start text-muted-foreground hover:text-foreground"
+            onClick={() => setCreateChannelOpen(true)}
           >
-            <Link href={`/workspaces/${workspaceId}/channels/new`}>
-              <span className="mr-2 text-base leading-none">+</span>
-              Create Channel
-            </Link>
+            <span className="mr-2 text-base leading-none">+</span>
+            Create Channel
           </Button>
+          <CreateChannelDialog
+            workspaceId={workspaceId}
+            open={createChannelOpen}
+            onOpenChange={setCreateChannelOpen}
+          />
+        </div>
+      )}
+
+      {/* Settings link */}
+      {workspaceId && (
+        <div className="px-3 py-1">
+          <Link
+            href={`/workspaces/${workspaceId}/settings`}
+            className={cn(
+              'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+              pathname.endsWith('/settings')
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+            )}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            Settings
+          </Link>
         </div>
       )}
 

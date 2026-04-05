@@ -51,4 +51,8 @@ function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
   return <div className={cn('flex justify-end gap-2 mt-4', className)} {...props} />;
 }
 
-export { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter };
+function DialogContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn(className)} {...props} />;
+}
+
+export { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter };

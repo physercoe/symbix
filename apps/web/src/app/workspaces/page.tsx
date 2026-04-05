@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
+import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import Link from 'next/link';
+import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
 
 export default function WorkspacesPage() {
+  const [createOpen, setCreateOpen] = useState(false);
   const { data: workspaces, isLoading } = trpc.workspaces.list.useQuery();
 
   return (
@@ -39,12 +42,15 @@ export default function WorkspacesPage() {
               </div>
             </Link>
           ))}
-          {workspaces?.length === 0 && (
+          {workspaces && workspaces.length === 0 && (
             <p className="text-sm text-muted-foreground">No workspaces yet.</p>
           )}
         </div>
 
-        <Button className="w-full">Create Workspace</Button>
+        <Button className="w-full" onClick={() => setCreateOpen(true)}>
+          Create Workspace
+        </Button>
+        <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
       </div>
     </div>
   );
