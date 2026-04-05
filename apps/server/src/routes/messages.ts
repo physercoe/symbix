@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
 import { messages } from '../db/schema/index.js';
 import { sendMessageSchema, listMessagesSchema } from '@symbix/shared';
+import { routeMessageToAgents } from '../services/agent-router.js';
 
 export const messagesRouter = router({
   send: protectedProcedure
@@ -25,6 +26,11 @@ export const messagesRouter = router({
       await ctx.redis.publish(
         `channel:${input.channelId}`,
         JSON.stringify({ type: 'new_message', message }),
+      );
+
+      // Route to agents (fire-and-forget, don't block response)
+      routeMessageToAgents(message).catch((err) =>
+        console.error('Agent routing error:', err),
       );
 
       return message;
