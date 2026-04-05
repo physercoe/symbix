@@ -332,6 +332,24 @@ When building from scratch, create files in this order:
 - [ ] Push notification API stubs (for future mobile)
 - [ ] `packages/device-sdk` with types and README, no real MQTT connection
 
+### P3 — UI Polish Roadmap (Post-MVP)
+
+To close the gap with Slack/Discord-quality UI, add these layers on top of the existing shadcn/ui foundation:
+
+| Layer | Package | Purpose |
+|-------|---------|---------|
+| **Animations** | `framer-motion` | Smooth transitions for tab switches, message appear/disappear, panel slides, hover effects |
+| **Virtualized lists** | `@tanstack/react-virtual` | Performant rendering of 10k+ message histories without DOM bloat |
+| **Command palette** | `cmdk` (already shadcn-compatible) | Slash commands, quick navigation, fuzzy search across channels/agents |
+| **Emoji picker** | `@emoji-mart/react` | Full emoji picker with skin tone, search, recent — like Slack/Discord |
+| **Mention autocomplete** | Custom (Radix Popover + fuzzy match) | @user and @agent mention suggestions while typing |
+| **Keyboard shortcuts** | `react-hotkeys-hook` | Ctrl+K search, Ctrl+/ help, arrow nav, Esc close, etc. |
+| **Sound/notifications** | Web Audio API + Notification API | Message sounds, desktop notifications, unread badge counts |
+| **Drag and drop** | `@dnd-kit/core` | Reorder tasks (kanban), drag files to upload, rearrange sidebar channels |
+| **Rich text input** | `tiptap` or `lexical` | Formatting toolbar, inline code, blockquotes, lists in message composer |
+
+**Key principle:** shadcn/ui is the right foundation — don't switch to MUI/Ant Design. The polish comes from these additive layers, not from replacing the component library.
+
 ---
 
 ## Common Tasks
@@ -343,10 +361,10 @@ When building from scratch, create files in this order:
 4. Use in frontend via `trpc.<resource>.<procedure>.useQuery()` / `.useMutation()`
 
 ### Add a new agent tool
-1. Define tool schema (JSON Schema format) in `packages/shared/src/tools.ts`
-2. Add execution handler in `apps/server/src/services/tools/<tool-name>.ts`
-3. Register in the tool registry (`apps/server/src/services/tool-registry.ts`)
-4. Add to agent's `config.tools` array when creating/updating the agent
+1. Define tool schema (JSON Schema format) in `packages/shared/src/tools.ts` — add to `CHANNEL_TOOLS` array
+2. Add execution handler as a new `case` in `apps/server/src/services/tool-executor.ts`
+3. Enable per-agent via `capabilities: ["channel_tools"]` or `config.channelTools: true`
+4. See `docs/agent-tools-guide.md` for full reference
 
 ### Add a new UI component
 1. Check if shadcn/ui has it: `npx shadcn@latest add <component>`

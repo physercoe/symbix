@@ -9,7 +9,7 @@ import { useAgentStore } from '@/stores/agent-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover } from '@/components/ui/popover';
-import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+// DropdownMenu no longer needed for channel header
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { AddAgentToChannelDialog } from '@/components/channel/AddAgentToChannelDialog';
@@ -54,8 +54,6 @@ export function ChatView({ workspaceId, channelId }: Props) {
   const [addAgentOpen, setAddAgentOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ChannelView>('chat');
-  const [editingName, setEditingName] = useState(false);
-  const [editName, setEditName] = useState('');
   const [replyTo, setReplyTo] = useState<{ id: string; content: string | null; senderName: string } | null>(null);
   const { data: channel } = trpc.channels.getById.useQuery({ id: channelId });
   const { data, isLoading } = trpc.messages.list.useQuery({ channelId, limit: 50 });
@@ -76,7 +74,6 @@ export function ChatView({ workspaceId, channelId }: Props) {
     onSuccess: () => {
       utils.channels.getById.invalidate({ id: channelId });
       utils.channels.list.invalidate({ workspaceId });
-      setEditingName(false);
     },
   });
 
@@ -135,21 +132,8 @@ export function ChatView({ workspaceId, channelId }: Props) {
           {/* Channel name */}
           <div className="flex items-center min-w-0">
             <span className="text-muted-foreground mr-2">{isDM ? '@' : '#'}</span>
-            {editingName ? (
-              <form
-                onSubmit={(e) => { e.preventDefault(); if (editName.trim()) updateChannel.mutate({ id: channelId, name: editName.trim() }); }}
-                className="flex items-center gap-1"
-              >
-                <input autoFocus value={editName} onChange={(e) => setEditName(e.target.value)}
-                  className="h-7 w-40 rounded border border-input bg-background px-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  onKeyDown={(e) => { if (e.key === 'Escape') setEditingName(false); }} />
-                <Button type="submit" size="sm" variant="ghost" className="h-7 px-2 text-xs">Save</Button>
-                <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditingName(false)}>Cancel</Button>
-              </form>
-            ) : (
-              <h2 className="font-semibold text-sm">{channel?.name ?? 'Loading...'}</h2>
-            )}
-            {!editingName && channel?.description && (
+            <h2 className="font-semibold text-sm">{channel?.name ?? 'Loading...'}</h2>
+            {channel?.description && (
               <span className="ml-3 text-xs text-muted-foreground truncate hidden sm:inline">{channel.description}</span>
             )}
           </div>
@@ -157,35 +141,12 @@ export function ChatView({ workspaceId, channelId }: Props) {
           {/* Right actions */}
           <div className="flex items-center gap-1">
             {!isDM && (
-              <DropdownMenu
-                trigger={
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
-                    </svg>
-                  </Button>
-                }
-              >
-                <DropdownMenuItem onClick={() => setActiveTab('info')}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-                  </svg>
-                  Channel info
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setEditName(channel?.name ?? ''); setEditingName(true); }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                  Rename channel
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-red-400 hover:text-red-300"
-                  onClick={() => { if (confirm(`Delete #${channel?.name}? All messages will be lost.`)) deleteChannel.mutate({ id: channelId }); }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
-                  Delete channel
-                </DropdownMenuItem>
-              </DropdownMenu>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Channel info"
+                onClick={() => setActiveTab('info')}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </Button>
             )}
 
             <Popover open={membersOpen} onOpenChange={setMembersOpen} align="right"
@@ -283,7 +244,12 @@ export function ChatView({ workspaceId, channelId }: Props) {
         ) : activeTab === 'links' ? (
           <ChannelLinksView channelId={channelId} />
         ) : activeTab === 'info' ? (
-          <ChannelInfoView channelId={channelId} channel={channel} />
+          <ChannelInfoView
+            channelId={channelId}
+            channel={channel}
+            onRename={(name) => updateChannel.mutate({ id: channelId, name })}
+            onDelete={() => deleteChannel.mutate({ id: channelId })}
+          />
         ) : null}
       </div>
     </div>
