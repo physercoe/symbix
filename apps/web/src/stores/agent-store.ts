@@ -5,42 +5,42 @@ import { create } from 'zustand';
 interface StreamingMessage {
   agentId: string;
   channelId: string;
-  content: string; // accumulated text
+  content: string;
 }
 
 interface AgentState {
-  statuses: Map<string, string>; // agentId -> status
-  streaming: Map<string, StreamingMessage>; // agentId -> accumulated streaming response
+  statuses: Record<string, string>; // agentId -> status
+  streaming: Record<string, StreamingMessage>; // agentId -> accumulated streaming
   appendChunk: (agentId: string, channelId: string, chunk: string) => void;
   clearStreaming: (agentId: string) => void;
   setStatus: (agentId: string, status: string) => void;
 }
 
 export const useAgentStore = create<AgentState>((set) => ({
-  statuses: new Map(),
-  streaming: new Map(),
+  statuses: {},
+  streaming: {},
   appendChunk: (agentId, channelId, chunk) =>
     set((state) => {
-      const next = new Map(state.streaming);
-      const existing = next.get(agentId);
-      if (existing && existing.channelId === channelId) {
-        next.set(agentId, { ...existing, content: existing.content + chunk });
-      } else {
-        next.set(agentId, { agentId, channelId, content: chunk });
-      }
-      return { streaming: next };
+      const existing = state.streaming[agentId];
+      const content =
+        existing && existing.channelId === channelId
+          ? existing.content + chunk
+          : chunk;
+      return {
+        streaming: {
+          ...state.streaming,
+          [agentId]: { agentId, channelId, content },
+        },
+      };
     }),
   clearStreaming: (agentId) =>
     set((state) => {
-      if (!state.streaming.has(agentId)) return state;
-      const next = new Map(state.streaming);
-      next.delete(agentId);
-      return { streaming: next };
+      if (!state.streaming[agentId]) return state;
+      const { [agentId]: _, ...rest } = state.streaming;
+      return { streaming: rest };
     }),
   setStatus: (agentId, status) =>
-    set((state) => {
-      const next = new Map(state.statuses);
-      next.set(agentId, status);
-      return { statuses: next };
-    }),
+    set((state) => ({
+      statuses: { ...state.statuses, [agentId]: status },
+    })),
 }));
