@@ -15,8 +15,8 @@ export async function createContext({ req }: CreateFastifyContextOptions) {
       const token = authHeader.slice(7);
       const payload = await clerk.verifyToken(token);
       userId = payload.sub;
-    } catch {
-      // Invalid token — userId stays null
+    } catch (err) {
+      console.error('Clerk verifyToken failed:', err);
     }
   }
   return { db, redis, userId };
