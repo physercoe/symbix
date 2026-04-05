@@ -5,8 +5,8 @@ export class AnthropicProvider implements LLMProvider {
   name = 'anthropic';
   private client: Anthropic;
 
-  constructor({ apiKey }: { apiKey: string }) {
-    this.client = new Anthropic({ apiKey });
+  constructor({ apiKey, baseURL }: { apiKey: string; baseURL?: string }) {
+    this.client = new Anthropic({ apiKey, ...(baseURL ? { baseURL } : {}) });
   }
 
   async *chat(params: ChatParams): AsyncGenerator<ChatChunk> {

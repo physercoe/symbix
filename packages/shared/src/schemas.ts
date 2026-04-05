@@ -46,6 +46,8 @@ export const createAgentSchema = z.object({
   systemPrompt: z.string(),
   llmProvider: z.string().default('anthropic'),
   llmModel: z.string().default('claude-sonnet-4-20250514'),
+  llmBaseUrl: z.string().optional(),
+  llmApiKey: z.string().optional(),
   agentClass: z.enum(AGENT_CLASSES).default('software'),
   agentType: z.enum(AGENT_TYPES).default('hosted_bot'),
   machineId: z.string().uuid().optional(),

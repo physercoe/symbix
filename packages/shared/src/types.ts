@@ -50,6 +50,8 @@ export interface Agent {
   systemPrompt: string;
   llmProvider: string;
   llmModel: string;
+  llmBaseUrl: string | null;
+  llmApiKey: string | null;
   deviceType: string | null;
   hardwareId: string | null;
   mqttTopic: string | null;

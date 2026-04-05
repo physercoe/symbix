@@ -12,6 +12,46 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { CreateChannelDialog } from '@/components/channel/CreateChannelDialog';
 
+const agentStatusDot: Record<string, string> = {
+  active: 'bg-green-500',
+  sleeping: 'bg-yellow-500',
+  offline: 'bg-gray-500',
+  error: 'bg-red-500',
+  disabled: 'bg-gray-500',
+};
+
+const agentTypeLabel: Record<string, string> = {
+  hosted_bot: 'Bot',
+  cli_agent: 'CLI',
+  cloud_agent: 'Cloud',
+  device_agent: 'Device',
+};
+
+function AgentSection({ workspaceId }: { workspaceId: string }) {
+  const { data: agents } = trpc.agents.list.useQuery({ workspaceId });
+  if (!agents || agents.length === 0) return null;
+
+  return (
+    <div className="mt-3">
+      <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Agents
+      </p>
+      {agents.map((agent) => (
+        <div
+          key={agent.id}
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground"
+        >
+          <div className={cn('h-2 w-2 rounded-full shrink-0', agentStatusDot[agent.status] ?? 'bg-gray-500')} />
+          <span className="truncate">{agent.name}</span>
+          <span className="ml-auto text-[10px] opacity-60">
+            {agentTypeLabel[agent.agentType] ?? agent.agentType}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ChannelIcon({ type }: { type: string }) {
   if (type === 'dm') return <span className="text-muted-foreground">@</span>;
   return <span className="text-muted-foreground">#</span>;
@@ -105,7 +145,7 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Channel list */}
+      {/* Channel list + Agents */}
       <ScrollArea className="flex-1 px-2 py-2">
         {workspaceId && channels ? (
           <>
@@ -133,6 +173,7 @@ export function Sidebar() {
               workspaceId={workspaceId}
               pathname={pathname}
             />
+            <AgentSection workspaceId={workspaceId} />
           </>
         ) : (
           !workspaceId && (

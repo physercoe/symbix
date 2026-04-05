@@ -17,12 +17,27 @@ interface Props {
   channelId: string;
 }
 
+const statusDotColor: Record<string, string> = {
+  active: 'bg-green-500',
+  sleeping: 'bg-yellow-500',
+  offline: 'bg-gray-500',
+  error: 'bg-red-500',
+  disabled: 'bg-gray-500',
+};
+
 export function ChatView({ workspaceId, channelId }: Props) {
   const [addAgentOpen, setAddAgentOpen] = useState(false);
   const { data: channel } = trpc.channels.getById.useQuery({ id: channelId });
   const { data, isLoading } = trpc.messages.list.useQuery({ channelId, limit: 50 });
+  const { data: members } = trpc.channels.listMembers.useQuery({ channelId });
+  const { data: allAgents } = trpc.agents.list.useQuery({ workspaceId });
   const setMessages = useMessageStore((s) => s.setMessages);
   const messages = useMessageStore((s) => s.messages.get(channelId)) ?? EMPTY_MESSAGES;
+
+  const agentMembers = (members ?? [])
+    .filter((m) => m.memberType === 'agent' && m.agentId)
+    .map((m) => allAgents?.find((a) => a.id === m.agentId))
+    .filter(Boolean);
 
   // Sync fetched messages to store (only initial load)
   useEffect(() => {
@@ -53,9 +68,21 @@ export function ChatView({ workspaceId, channelId }: Props) {
             </span>
           )}
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setAddAgentOpen(true)}>
-          + Agent
-        </Button>
+        <div className="flex items-center gap-2">
+          {agentMembers.map((agent) => (
+            <div
+              key={agent!.id}
+              className="flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs"
+              title={`${agent!.name} (${agent!.status})`}
+            >
+              <div className={`h-1.5 w-1.5 rounded-full ${statusDotColor[agent!.status] ?? 'bg-gray-500'}`} />
+              <span className="truncate max-w-[80px]">{agent!.name}</span>
+            </div>
+          ))}
+          <Button variant="ghost" size="sm" onClick={() => setAddAgentOpen(true)}>
+            + Agent
+          </Button>
+        </div>
         <AddAgentToChannelDialog
           workspaceId={workspaceId}
           channelId={channelId}

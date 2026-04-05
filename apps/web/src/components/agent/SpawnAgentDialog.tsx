@@ -26,6 +26,10 @@ export function SpawnAgentDialog({ workspaceId, open, onOpenChange }: Props) {
   const [name, setName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
+  const [llmProvider, setLlmProvider] = useState('anthropic');
+  const [llmModel, setLlmModel] = useState('claude-sonnet-4-20250514');
+  const [llmBaseUrl, setLlmBaseUrl] = useState('');
+  const [llmApiKey, setLlmApiKey] = useState('');
   const [machineId, setMachineId] = useState('');
   const [adapter, setAdapter] = useState('claude-code');
   const utils = trpc.useUtils();
@@ -53,6 +57,10 @@ export function SpawnAgentDialog({ workspaceId, open, onOpenChange }: Props) {
       setName('');
       setRoleDescription('');
       setSystemPrompt('');
+      setLlmProvider('anthropic');
+      setLlmModel('claude-sonnet-4-20250514');
+      setLlmBaseUrl('');
+      setLlmApiKey('');
       setMachineId('');
       setMode('hosted_bot');
     }, 200);
@@ -68,6 +76,10 @@ export function SpawnAgentDialog({ workspaceId, open, onOpenChange }: Props) {
         name: name.trim(),
         roleDescription: roleDescription.trim(),
         systemPrompt: systemPrompt.trim(),
+        llmProvider,
+        llmModel,
+        llmBaseUrl: llmBaseUrl.trim() || undefined,
+        llmApiKey: llmApiKey.trim() || undefined,
         agentType: 'hosted_bot',
       });
     } else {
@@ -160,6 +172,66 @@ export function SpawnAgentDialog({ workspaceId, open, onOpenChange }: Props) {
                   rows={3}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
+              </div>
+              <div className="border-t pt-3">
+                <p className="text-sm font-medium mb-2">LLM Configuration</p>
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="agent-provider" className="text-xs text-muted-foreground">
+                      Provider
+                    </label>
+                    <select
+                      id="agent-provider"
+                      value={llmProvider}
+                      onChange={(e) => {
+                        setLlmProvider(e.target.value);
+                        setLlmModel(
+                          e.target.value === 'anthropic'
+                            ? 'claude-sonnet-4-20250514'
+                            : 'gpt-4o',
+                        );
+                      }}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="anthropic">Anthropic (Claude)</option>
+                      <option value="openai">OpenAI / Compatible</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="agent-model" className="text-xs text-muted-foreground">
+                      Model
+                    </label>
+                    <Input
+                      id="agent-model"
+                      value={llmModel}
+                      onChange={(e) => setLlmModel(e.target.value)}
+                      placeholder={llmProvider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o'}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="agent-baseurl" className="text-xs text-muted-foreground">
+                      Base URL <span className="text-muted-foreground">(optional, for custom endpoints)</span>
+                    </label>
+                    <Input
+                      id="agent-baseurl"
+                      value={llmBaseUrl}
+                      onChange={(e) => setLlmBaseUrl(e.target.value)}
+                      placeholder="https://api.openai.com/v1"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="agent-apikey" className="text-xs text-muted-foreground">
+                      API Key <span className="text-muted-foreground">(optional, falls back to server default)</span>
+                    </label>
+                    <Input
+                      id="agent-apikey"
+                      type="password"
+                      value={llmApiKey}
+                      onChange={(e) => setLlmApiKey(e.target.value)}
+                      placeholder="sk-..."
+                    />
+                  </div>
+                </div>
               </div>
             </>
           )}

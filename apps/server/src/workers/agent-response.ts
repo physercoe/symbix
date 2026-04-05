@@ -5,15 +5,26 @@ import { agents, messages, agentMemory } from '../db/schema/index.js';
 import { redis } from '../redis.js';
 import { env } from '../env.js';
 import { LLM, AnthropicProvider, OpenAIProvider } from '@symbix/llm';
+import type { Agent } from '../db/schema/agents.js';
 import { agentResponseQueue } from '../services/bull.js';
 
-// Initialize LLM registry
-const llm = new LLM();
-if (env.ANTHROPIC_API_KEY) {
-  llm.register(new AnthropicProvider({ apiKey: env.ANTHROPIC_API_KEY }));
-}
-if (env.OPENAI_API_KEY) {
-  llm.register(new OpenAIProvider({ apiKey: env.OPENAI_API_KEY }));
+function createLLMForAgent(agent: Agent): LLM {
+  const llm = new LLM();
+  const provider = agent.llmProvider;
+
+  if (provider === 'anthropic') {
+    const apiKey = agent.llmApiKey || env.ANTHROPIC_API_KEY;
+    if (apiKey) {
+      llm.register(new AnthropicProvider({ apiKey, baseURL: agent.llmBaseUrl ?? undefined }));
+    }
+  } else if (provider === 'openai') {
+    const apiKey = agent.llmApiKey || env.OPENAI_API_KEY;
+    if (apiKey) {
+      llm.register(new OpenAIProvider({ apiKey, baseURL: agent.llmBaseUrl ?? undefined }));
+    }
+  }
+
+  return llm;
 }
 
 interface AgentResponseJobData {
@@ -79,6 +90,8 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
 
   // 6. Stream LLM response
   let fullResponse = '';
+
+  const llm = createLLMForAgent(agent);
 
   try {
     const stream = llm.chat({

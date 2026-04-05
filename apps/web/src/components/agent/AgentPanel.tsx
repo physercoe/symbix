@@ -17,6 +17,8 @@ interface Props {
     systemPrompt: string;
     llmProvider: string;
     llmModel: string;
+    llmBaseUrl: string | null;
+    llmApiKey: string | null;
     machineId: string | null;
     capabilities: string[];
     createdAt: string;
@@ -75,11 +77,21 @@ export function AgentPanel({ agent, onClose }: Props) {
         <div className="text-xs space-y-1">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Provider</span>
-            <span>{agent.llmProvider}</span>
+            <span>{agent.llmProvider === 'anthropic' ? 'Anthropic' : 'OpenAI / Compatible'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Model</span>
-            <span>{agent.llmModel}</span>
+            <span className="truncate ml-2">{agent.llmModel}</span>
+          </div>
+          {agent.llmBaseUrl && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Base URL</span>
+              <span className="truncate ml-2">{agent.llmBaseUrl}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">API Key</span>
+            <span>{agent.llmApiKey ? '******** (custom)' : 'Server default'}</span>
           </div>
         </div>
       )}

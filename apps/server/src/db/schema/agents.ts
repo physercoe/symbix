@@ -14,6 +14,8 @@ export const agents = pgTable('agents', {
   systemPrompt: text('system_prompt').notNull(),
   llmProvider: varchar('llm_provider', { length: 50 }).notNull().default('anthropic'),
   llmModel: varchar('llm_model', { length: 100 }).notNull().default('claude-sonnet-4-20250514'),
+  llmBaseUrl: text('llm_base_url'),
+  llmApiKey: text('llm_api_key'),
   deviceType: varchar('device_type', { length: 100 }),
   hardwareId: varchar('hardware_id', { length: 255 }).unique(),
   mqttTopic: varchar('mqtt_topic', { length: 255 }),
