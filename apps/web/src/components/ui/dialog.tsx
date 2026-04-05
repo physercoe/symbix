@@ -26,9 +26,16 @@ function Dialog({ open, onOpenChange, children }: DialogProps) {
     <dialog
       ref={ref}
       onClose={() => onOpenChange(false)}
-      className="backdrop:bg-black/50 bg-transparent p-0"
+      onClick={(e) => {
+        // Close on backdrop click (click on dialog element itself, not its children)
+        if (e.target === ref.current) onOpenChange(false);
+      }}
+      className="backdrop:bg-black/50 bg-transparent p-0 open:flex items-center justify-center"
     >
-      <div className="bg-card text-card-foreground rounded-lg border shadow-lg p-6 w-full max-w-md">
+      <div
+        className="bg-card text-card-foreground rounded-lg border shadow-lg p-6 w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
         {children}
       </div>
     </dialog>
