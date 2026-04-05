@@ -24,11 +24,19 @@ export const updateChannelSchema = z.object({
 });
 
 // Message schemas
+export const attachmentSchema = z.object({
+  url: z.string(),
+  contentType: z.string(),
+  filename: z.string(),
+  size: z.number().optional(),
+});
+
 export const sendMessageSchema = z.object({
   channelId: z.string().uuid(),
   content: z.string().optional(),
   contentType: z.enum(CONTENT_TYPES).default('text'),
-  mediaUrl: z.string().url().optional(),
+  mediaUrl: z.string().optional(),
+  attachments: z.array(attachmentSchema).max(10).optional(),
   parentId: z.string().uuid().optional(),
 });
 

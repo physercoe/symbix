@@ -9,6 +9,11 @@ export const messagesRouter = router({
   send: protectedProcedure
     .input(sendMessageSchema)
     .mutation(async ({ ctx, input }) => {
+      // Store attachments array in metadata
+      const metadata = input.attachments?.length
+        ? { attachments: input.attachments }
+        : undefined;
+
       const [message] = await ctx.db
         .insert(messages)
         .values({
@@ -18,6 +23,7 @@ export const messagesRouter = router({
           content: input.content,
           contentType: input.contentType,
           mediaUrl: input.mediaUrl,
+          metadata,
           parentId: input.parentId,
         })
         .returning();

@@ -20,13 +20,13 @@ interface Props {
   isLoading: boolean;
   senderNames?: Map<string, string>;
   streaming?: StreamingEntry[];
+  onReply?: (msg: { id: string; content: string | null; senderName: string }) => void;
 }
 
-export function MessageList({ messages, isLoading, senderNames, streaming }: Props) {
+export function MessageList({ messages, isLoading, senderNames, streaming, onReply }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages or streaming chunks arrive
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, streaming]);
@@ -70,12 +70,11 @@ export function MessageList({ messages, isLoading, senderNames, streaming }: Pro
               message={msg}
               showHeader={showHeader}
               senderName={senderNames?.get(msg.senderId)}
+              onReply={onReply}
             />
           );
         })}
-        {/* Streaming messages — shown inline as virtual messages */}
         {streaming && streaming.map((s) => {
-          // Check if the last real message is from the same agent to decide header
           const lastMsg = messages[messages.length - 1];
           const showHeader = !lastMsg || lastMsg.senderId !== s.agentId || lastMsg.senderType !== 'agent';
           return (

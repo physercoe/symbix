@@ -8,66 +8,18 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { Channel, Message } from '@symbix/shared';
 
+// Note: Tab navigation is rendered in ChatView header bar. This panel just shows content.
+
+type Tab = 'info' | 'pinned' | 'files' | 'tasks' | 'docs' | 'links';
+
 interface Props {
   workspaceId: string;
   channelId: string;
   channel: Channel | undefined;
   messages: Message[];
+  activeTab: Tab;
+  onTabChange: (tab: Tab) => void;
   onClose: () => void;
-}
-
-type Tab = 'info' | 'pinned' | 'files' | 'tasks' | 'docs' | 'links';
-
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'info', label: 'Info', icon: 'info' },
-  { id: 'pinned', label: 'Pinned', icon: 'pin' },
-  { id: 'files', label: 'Files', icon: 'file' },
-  { id: 'tasks', label: 'Tasks', icon: 'task' },
-  { id: 'docs', label: 'Docs', icon: 'doc' },
-  { id: 'links', label: 'Links', icon: 'link' },
-];
-
-function TabIcon({ icon }: { icon: string }) {
-  switch (icon) {
-    case 'info':
-      return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-        </svg>
-      );
-    case 'pin':
-      return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
-        </svg>
-      );
-    case 'file':
-      return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-        </svg>
-      );
-    case 'task':
-      return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-        </svg>
-      );
-    case 'doc':
-      return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
-        </svg>
-      );
-    case 'link':
-      return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-        </svg>
-      );
-    default:
-      return null;
-  }
 }
 
 function InfoTab({ channel, channelId }: { channel: Channel | undefined; channelId: string }) {
@@ -311,14 +263,22 @@ function FilesFromMessages({ messages }: { messages: Message[] }) {
   );
 }
 
-export function ChannelInfoPanel({ workspaceId, channelId, channel, messages, onClose }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('info');
+export function ChannelInfoPanel({ workspaceId, channelId, channel, messages, activeTab, onTabChange, onClose }: Props) {
+  // Tab labels for the panel header
+  const tabLabels: Record<Tab, string> = {
+    info: 'Channel Info',
+    pinned: 'Pinned Messages',
+    files: 'Files',
+    tasks: 'Tasks',
+    docs: 'Documents',
+    links: 'Links',
+  };
 
   return (
     <div className="flex w-80 shrink-0 flex-col border-l bg-background">
       {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b px-3">
-        <h3 className="text-sm font-semibold">Channel Details</h3>
+      <div className="flex h-12 items-center justify-between border-b px-3">
+        <h3 className="text-sm font-semibold">{tabLabels[activeTab]}</h3>
         <button
           type="button"
           onClick={onClose}
@@ -328,26 +288,6 @@ export function ChannelInfoPanel({ workspaceId, channelId, channel, messages, on
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b overflow-x-auto">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              'flex items-center gap-1 px-2.5 py-2 text-xs whitespace-nowrap transition-colors border-b-2',
-              activeTab === tab.id
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <TabIcon icon={tab.icon} />
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {/* Tab content */}
