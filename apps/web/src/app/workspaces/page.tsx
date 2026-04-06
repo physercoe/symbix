@@ -5,20 +5,12 @@ import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
 
 export default function HomePage() {
   const [createOpen, setCreateOpen] = useState(false);
   const { data: workspaces, isLoading } = trpc.workspaces.list.useQuery();
-  const { data: specs } = trpc.specs.list.useQuery({});
-  const { data: items } = trpc.userItems.list.useQuery({});
-
-  const agentSpecs = specs?.filter((s) => s.specType === 'agent') ?? [];
-  const workspaceSpecs = specs?.filter((s) => s.specType === 'workspace') ?? [];
-  const recentItems = items?.slice(0, 5) ?? [];
 
   return (
     <div className="flex h-full overflow-auto">
@@ -90,9 +82,7 @@ export default function HomePage() {
                 </svg>
                 <span className="text-sm font-medium">Specs</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {agentSpecs.length} agent, {workspaceSpecs.length} workspace
-              </p>
+              <p className="text-xs text-muted-foreground">Agent &amp; workspace specs</p>
             </Link>
 
             {/* Patterns card */}
@@ -103,9 +93,7 @@ export default function HomePage() {
                 </svg>
                 <span className="text-sm font-medium">Patterns</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {items?.filter((i) => i.type === 'pattern').length ?? 0} reusable
-              </p>
+              <p className="text-xs text-muted-foreground">Reusable code &amp; prompts</p>
             </Link>
 
             {/* References card */}
@@ -116,44 +104,10 @@ export default function HomePage() {
                 </svg>
                 <span className="text-sm font-medium">References</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {items?.filter((i) => i.type === 'reference').length ?? 0} saved
-              </p>
+              <p className="text-xs text-muted-foreground">Saved messages &amp; links</p>
             </Link>
           </div>
         </section>
-
-        {/* Recent toolkit items */}
-        {recentItems.length > 0 && (
-          <>
-            <Separator />
-            <section>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Recent Activity</h2>
-              <div className="space-y-1">
-                {recentItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/toolkit/${item.type === 'insight' ? 'insights' : item.type === 'reference' ? 'references' : item.type === 'pattern' ? 'patterns' : 'assets'}`}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-accent/50 transition-colors"
-                  >
-                    <Badge variant="outline" className={cn('text-[10px] px-1 py-0',
-                      item.type === 'insight' ? 'text-yellow-400 border-yellow-400/30' :
-                      item.type === 'reference' ? 'text-amber-400 border-amber-400/30' :
-                      item.type === 'pattern' ? 'text-cyan-400 border-cyan-400/30' :
-                      'text-emerald-400 border-emerald-400/30'
-                    )}>
-                      {item.type}
-                    </Badge>
-                    <span className="truncate flex-1">{item.title}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">
-                      {new Date(item.updatedAt).toLocaleDateString()}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
 
         <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
       </div>
