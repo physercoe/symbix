@@ -1,4 +1,6 @@
 export * from './users';
+export * from './teams';
+export * from './team-members';
 export * from './workspaces';
 export * from './channels';
 export * from './machines';
@@ -13,3 +15,4 @@ export * from './channel-items';
 export * from './workspace-items';
 export * from './user-items';
 export * from './specs';
+export * from './activity-events';

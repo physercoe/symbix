@@ -1,4 +1,4 @@
-import type { AgentClass, AgentStatus, AgentType, ChannelType, ContentType, MachineStatus, MachineType, MemberType, SenderType, WorkspaceRole } from './constants.js';
+import type { AgentClass, AgentStatus, AgentType, ChannelType, ContentType, MachineStatus, MachineType, MemberType, SenderType, WorkspaceRole, TeamRole, ActivityEventType, SpecVisibility } from './constants.js';
 
 export interface User {
   id: string;
@@ -10,8 +10,28 @@ export interface User {
   createdAt: string;
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  description: string | null;
+  avatarUrl: string | null;
+  settings: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  teamId: string;
+  userId: string;
+  role: TeamRole;
+  joinedAt: string;
+}
+
 export interface Workspace {
   id: string;
+  teamId: string;
   name: string;
   ownerId: string;
   createdAt: string;
@@ -28,7 +48,7 @@ export interface Channel {
 
 export interface Machine {
   id: string;
-  workspaceId: string;
+  teamId: string;
   name: string;
   machineType: MachineType;
   apiKey: string;
@@ -40,7 +60,7 @@ export interface Machine {
 
 export interface Agent {
   id: string;
-  workspaceId: string;
+  teamId: string;
   name: string;
   avatarUrl: string | null;
   agentClass: AgentClass;
@@ -150,11 +170,23 @@ export interface UserItem {
 }
 
 export type SpecType = 'agent' | 'workspace';
-export type SpecVisibility = 'private' | 'workspace' | 'public';
+export type { SpecVisibility } from './constants.js';
+
+export interface ActivityEvent {
+  id: string;
+  teamId: string;
+  workspaceId: string | null;
+  actorType: 'user' | 'agent' | 'system';
+  actorId: string;
+  eventType: ActivityEventType;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
 
 export interface Spec {
   id: string;
   userId: string;
+  teamId: string | null;
   specType: SpecType;
   name: string;
   version: string | null;
@@ -163,6 +195,7 @@ export interface Spec {
   visibility: SpecVisibility;
   category: string | null;
   usageCount: number;
+
   updatedAt: string;
   createdAt: string;
 }

@@ -1,10 +1,10 @@
 import { pgTable, uuid, varchar, text, jsonb, timestamp, integer } from 'drizzle-orm/pg-core';
-import { workspaces } from './workspaces';
+import { teams } from './teams';
 import { machines } from './machines';
 
 export const agents = pgTable('agents', {
   id: uuid('id').primaryKey().defaultRandom(),
-  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   machineId: uuid('machine_id').references(() => machines.id, { onDelete: 'set null' }),
   name: varchar('name', { length: 255 }).notNull(),
   avatarUrl: text('avatar_url'),

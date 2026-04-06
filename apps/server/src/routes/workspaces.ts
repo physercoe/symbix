@@ -1,21 +1,62 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
-import { workspaces, channels, channelMembers, workspaceMembers, users } from '../db/schema/index.js';
+import { workspaces, channels, channelMembers, workspaceMembers, users, teams, teamMembers } from '../db/schema/index.js';
 import {
-  createWorkspaceSchema,
   updateWorkspaceSchema,
   inviteToWorkspaceSchema,
 } from '@symbix/shared';
+import { recordActivity } from '../services/activity.js';
 
 export const workspacesRouter = router({
   create: protectedProcedure
-    .input(createWorkspaceSchema)
+    .input(z.object({
+      teamId: z.string().uuid().optional(),
+      name: z.string().min(1).max(100),
+    }))
     .mutation(async ({ ctx, input }) => {
+      // Resolve teamId: use provided, or find/create default team for user
+      let teamId = input.teamId;
+      if (!teamId) {
+        // Find user's first team
+        const [membership] = await ctx.db
+          .select({ teamId: teamMembers.teamId })
+          .from(teamMembers)
+          .where(eq(teamMembers.userId, ctx.userId))
+          .limit(1);
+
+        if (membership) {
+          teamId = membership.teamId;
+        } else {
+          // Auto-create a default team for the user
+          const [user] = await ctx.db
+            .select({ name: users.name })
+            .from(users)
+            .where(eq(users.id, ctx.userId))
+            .limit(1);
+
+          const teamName = `${user?.name ?? 'User'}'s Team`;
+          const slug = teamName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) + '-' + Date.now().toString(36);
+
+          const [newTeam] = await ctx.db
+            .insert(teams)
+            .values({ name: teamName, slug, ownerId: ctx.userId })
+            .returning();
+
+          await ctx.db.insert(teamMembers).values({
+            teamId: newTeam.id,
+            userId: ctx.userId,
+            role: 'owner',
+          });
+
+          teamId = newTeam.id;
+        }
+      }
+
       const [workspace] = await ctx.db
         .insert(workspaces)
-        .values({ name: input.name, ownerId: ctx.userId })
+        .values({ teamId, name: input.name, ownerId: ctx.userId })
         .returning();
 
       // Add creator as workspace member
@@ -45,15 +86,50 @@ export const workspacesRouter = router({
         });
       }
 
+      recordActivity({
+        teamId,
+        workspaceId: workspace.id,
+        actorType: 'user',
+        actorId: ctx.userId,
+        eventType: 'workspace_create',
+        metadata: { workspaceName: input.name },
+      });
+
       return workspace;
     }),
 
-  list: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db
-      .select()
-      .from(workspaces)
-      .where(eq(workspaces.ownerId, ctx.userId));
-  }),
+  list: protectedProcedure
+    .input(z.object({ teamId: z.string().uuid().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      if (input?.teamId) {
+        // List workspaces for a specific team
+        return ctx.db
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.teamId, input.teamId));
+      }
+
+      // List workspaces across all teams the user belongs to
+      const memberships = await ctx.db
+        .select({ teamId: teamMembers.teamId })
+        .from(teamMembers)
+        .where(eq(teamMembers.userId, ctx.userId));
+
+      const teamIds = memberships.map((m) => m.teamId);
+
+      if (teamIds.length === 0) {
+        // Fallback: return workspaces the user owns (for backward compat before teams exist)
+        return ctx.db
+          .select()
+          .from(workspaces)
+          .where(eq(workspaces.ownerId, ctx.userId));
+      }
+
+      return ctx.db
+        .select()
+        .from(workspaces)
+        .where(inArray(workspaces.teamId, teamIds));
+    }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
@@ -130,7 +206,6 @@ export const workspacesRouter = router({
         .where(eq(workspaceMembers.workspaceId, input.workspaceId));
 
       // Auto-add current user if they own the workspace but aren't in the members table
-      // (handles workspaces created before the members table was populated)
       const currentUserIsMember = members.some((m) => m.userId === ctx.userId);
       if (!currentUserIsMember) {
         const [ws] = await ctx.db

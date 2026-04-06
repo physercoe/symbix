@@ -1,7 +1,7 @@
 import type { Job } from 'bullmq';
 import { eq, desc } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { agents, messages, agentMemory } from '../db/schema/index.js';
+import { agents, messages, agentMemory, channels } from '../db/schema/index.js';
 import { redis } from '../redis.js';
 import { env } from '../env.js';
 import { LLM, AnthropicProvider, OpenAIProvider } from '@symbix/llm';
@@ -11,6 +11,7 @@ import { agentResponseQueue } from '../services/bull.js';
 import { executeTool } from '../services/tool-executor.js';
 import { ALL_AGENT_TOOLS, resolvePermissions, filterToolsByPermissions, hasToolPermission } from '@symbix/shared';
 import type { AgentPermissions } from '@symbix/shared';
+import { recordActivity } from '../services/activity.js';
 
 const MAX_TOOL_ROUNDS = 10;
 
@@ -102,12 +103,27 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
   const [agent] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
   if (!agent) return;
 
+  // 1b. Resolve workspaceId from channel (agents are now team-scoped, not workspace-scoped)
+  const [channel] = await db.select().from(channels).where(eq(channels.id, channelId)).limit(1);
+  const channelWorkspaceId = channel?.workspaceId ?? '';
+
+  const responseStartTime = Date.now();
+
   // 2. Wake agent
   await db.update(agents).set({ status: 'active' }).where(eq(agents.id, agentId));
   await redis.publish(
     `channel:${channelId}`,
     JSON.stringify({ type: 'agent_status', agentId, status: 'active' }),
   );
+
+  // Record wake event
+  recordActivity({
+    teamId: agent.teamId,
+    workspaceId: channelWorkspaceId || undefined,
+    actorType: 'agent',
+    actorId: agentId,
+    eventType: 'agent_wake',
+  });
 
   // 3. Load last 50 messages as context
   const recentMessages = await db
@@ -205,14 +221,26 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
 
         console.log(`[agent ${agent.name}] Executing tool: ${tc.name}(${JSON.stringify(parsedArgs)})`);
 
+        const toolStartTime = Date.now();
         const { result, isError } = await executeTool(tc.name, parsedArgs, {
           channelId,
           agentId,
-          workspaceId: agent.workspaceId,
+          workspaceId: channelWorkspaceId,
           permissions,
         });
+        const toolDurationMs = Date.now() - toolStartTime;
 
         console.log(`[agent ${agent.name}] Tool result (${isError ? 'ERROR' : 'OK'}): ${result.slice(0, 200)}`);
+
+        // Record tool call event
+        recordActivity({
+          teamId: agent.teamId,
+          workspaceId: channelWorkspaceId || undefined,
+          actorType: 'agent',
+          actorId: agentId,
+          eventType: 'tool_call',
+          metadata: { tool_name: tc.name, success: !isError, duration_ms: toolDurationMs },
+        });
 
         chatMessages.push({
           role: 'user',
@@ -227,7 +255,19 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
     console.error(`LLM error for agent ${agentId}:`, err);
     console.error(`Agent LLM config: provider=${agent.llmProvider}, model=${agent.llmModel}, baseUrl=${agent.llmBaseUrl}, hasApiKey=${!!agent.llmApiKey}, hasEnvKey=${agent.llmProvider === 'anthropic' ? !!env.ANTHROPIC_API_KEY : !!env.OPENAI_API_KEY}`);
     fullResponse = 'Sorry, I encountered an error generating a response.';
+
+    // Record error event
+    recordActivity({
+      teamId: agent.teamId,
+      workspaceId: channelWorkspaceId || undefined,
+      actorType: 'agent',
+      actorId: agentId,
+      eventType: 'agent_error',
+      metadata: { error: err instanceof Error ? err.message : String(err) },
+    });
   }
+
+  const latencyMs = Date.now() - responseStartTime;
 
   // 7. Save response as message
   const [savedMessage] = await db
@@ -246,6 +286,16 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
     JSON.stringify({ type: 'new_message', message: savedMessage }),
   );
 
+  // Record agent response event
+  recordActivity({
+    teamId: agent.teamId,
+    workspaceId: channelWorkspaceId || undefined,
+    actorType: 'agent',
+    actorId: agentId,
+    eventType: 'agent_response',
+    metadata: { latency_ms: latencyMs, response_length: fullResponse.length },
+  });
+
   // 8. Schedule sleep after 5 minutes of inactivity
   await agentResponseQueue.add(
     'sleep',
@@ -256,5 +306,15 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
 
 export async function processAgentSleep(job: Job<{ agentId: string }>) {
   const { agentId } = job.data;
+  const [agent] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
   await db.update(agents).set({ status: 'sleeping' }).where(eq(agents.id, agentId));
+
+  if (agent) {
+    recordActivity({
+      teamId: agent.teamId,
+      actorType: 'agent',
+      actorId: agentId,
+      eventType: 'agent_sleep',
+    });
+  }
 }

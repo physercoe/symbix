@@ -1,5 +1,6 @@
 import { router } from '../trpc.js';
 import { authRouter } from './auth.js';
+import { teamsRouter } from './teams.js';
 import { workspacesRouter } from './workspaces.js';
 import { channelsRouter } from './channels.js';
 import { messagesRouter } from './messages.js';
@@ -10,9 +11,11 @@ import { channelItemsRouter } from './channel-items.js';
 import { workspaceItemsRouter } from './workspace-items.js';
 import { userItemsRouter } from './user-items.js';
 import { specsRouter } from './specs.js';
+import { metricsRouter } from './metrics.js';
 
 export const appRouter = router({
   auth: authRouter,
+  teams: teamsRouter,
   workspaces: workspacesRouter,
   channels: channelsRouter,
   messages: messagesRouter,
@@ -23,6 +26,7 @@ export const appRouter = router({
   workspaceItems: workspaceItemsRouter,
   userItems: userItemsRouter,
   specs: specsRouter,
+  metrics: metricsRouter,
 });
 
 export type AppRouter = typeof appRouter;

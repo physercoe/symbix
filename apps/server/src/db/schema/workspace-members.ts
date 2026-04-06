@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, jsonb, timestamp } from 'drizzle-orm/pg-core';
 import { workspaces } from './workspaces';
 import { users } from './users';
 import { agents } from './agents';
@@ -10,6 +10,7 @@ export const workspaceMembers = pgTable('workspace_members', {
   userId: uuid('user_id').references(() => users.id),
   agentId: uuid('agent_id').references(() => agents.id),
   role: varchar('role', { length: 20 }).notNull().default('member'),
+  config: jsonb('config').default({}), // per-workspace agent overrides
   joinedAt: timestamp('joined_at').defaultNow().notNull(),
 });
 

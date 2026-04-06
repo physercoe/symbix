@@ -1,23 +1,41 @@
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
-import { agents, agentMemory } from '../db/schema/index.js';
+import { agents, agentMemory, workspaceMembers, channelMembers, channels, workspaces } from '../db/schema/index.js';
 import {
   createAgentSchema,
   updateAgentSchema,
   updateAgentMemorySchema,
   spawnAgentSchema,
+  deployAgentSchema,
 } from '@symbix/shared';
 
 export const agentsRouter = router({
   create: protectedProcedure
-    .input(createAgentSchema)
+    .input(createAgentSchema.extend({
+      teamId: z.string().uuid().optional(),
+      workspaceId: z.string().uuid().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
+      // Resolve teamId: use directly if provided, else derive from workspaceId
+      let teamId = input.teamId;
+      if (!teamId && input.workspaceId) {
+        const [ws] = await ctx.db
+          .select({ teamId: workspaces.teamId })
+          .from(workspaces)
+          .where(eq(workspaces.id, input.workspaceId))
+          .limit(1);
+        teamId = ws?.teamId;
+      }
+      if (!teamId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'teamId or workspaceId is required' });
+      }
+
       const [agent] = await ctx.db
         .insert(agents)
         .values({
-          workspaceId: input.workspaceId,
+          teamId,
           name: input.name,
           roleDescription: input.roleDescription,
           systemPrompt: input.systemPrompt,
@@ -38,12 +56,36 @@ export const agentsRouter = router({
     }),
 
   list: protectedProcedure
-    .input(z.object({ workspaceId: z.string().uuid() }))
+    .input(z.object({
+      teamId: z.string().uuid().optional(),
+      workspaceId: z.string().uuid().optional(),
+    }))
     .query(async ({ ctx, input }) => {
-      return ctx.db
-        .select()
-        .from(agents)
-        .where(eq(agents.workspaceId, input.workspaceId));
+      if (input.workspaceId) {
+        // List agents deployed to a specific workspace (via workspace_members)
+        const deployed = await ctx.db
+          .select({ agent: agents })
+          .from(workspaceMembers)
+          .innerJoin(agents, eq(agents.id, workspaceMembers.agentId))
+          .where(
+            and(
+              eq(workspaceMembers.workspaceId, input.workspaceId),
+              eq(workspaceMembers.memberType, 'agent'),
+            ),
+          );
+        return deployed.map((d) => d.agent);
+      }
+
+      if (input.teamId) {
+        // List all agents belonging to the team
+        return ctx.db
+          .select()
+          .from(agents)
+          .where(eq(agents.teamId, input.teamId));
+      }
+
+      // Fallback: return empty if neither provided
+      return [];
     }),
 
   getById: protectedProcedure
@@ -100,6 +142,86 @@ export const agentsRouter = router({
       }
 
       await ctx.db.delete(agents).where(eq(agents.id, input.id));
+
+      return { success: true };
+    }),
+
+  // Deploy an agent to a workspace (add to workspace_members + all public channels)
+  deploy: protectedProcedure
+    .input(deployAgentSchema)
+    .mutation(async ({ ctx, input }) => {
+      const [agent] = await ctx.db
+        .select()
+        .from(agents)
+        .where(eq(agents.id, input.agentId))
+        .limit(1);
+
+      if (!agent) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+      }
+
+      // Add to workspace_members
+      await ctx.db
+        .insert(workspaceMembers)
+        .values({
+          workspaceId: input.workspaceId,
+          memberType: 'agent',
+          agentId: input.agentId,
+          role: 'member',
+          config: input.config ?? {},
+        })
+        .onConflictDoNothing();
+
+      // Auto-add to all public channels in the workspace
+      const publicChannels = await ctx.db
+        .select()
+        .from(channels)
+        .where(and(eq(channels.workspaceId, input.workspaceId), eq(channels.type, 'public')));
+
+      for (const channel of publicChannels) {
+        await ctx.db
+          .insert(channelMembers)
+          .values({
+            channelId: channel.id,
+            memberType: 'agent',
+            agentId: input.agentId,
+          })
+          .onConflictDoNothing();
+      }
+
+      return { success: true, agentId: input.agentId, workspaceId: input.workspaceId };
+    }),
+
+  // Remove agent from a workspace
+  undeploy: protectedProcedure
+    .input(z.object({ agentId: z.string().uuid(), workspaceId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      // Remove from workspace_members
+      await ctx.db
+        .delete(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, input.workspaceId),
+            eq(workspaceMembers.agentId, input.agentId),
+          ),
+        );
+
+      // Remove from all channels in this workspace
+      const wsChannels = await ctx.db
+        .select({ id: channels.id })
+        .from(channels)
+        .where(eq(channels.workspaceId, input.workspaceId));
+
+      for (const ch of wsChannels) {
+        await ctx.db
+          .delete(channelMembers)
+          .where(
+            and(
+              eq(channelMembers.channelId, ch.id),
+              eq(channelMembers.agentId, input.agentId),
+            ),
+          );
+      }
 
       return { success: true };
     }),
@@ -179,12 +301,29 @@ export const agentsRouter = router({
     }),
 
   spawn: protectedProcedure
-    .input(spawnAgentSchema)
+    .input(spawnAgentSchema.extend({
+      teamId: z.string().uuid().optional(),
+      workspaceId: z.string().uuid().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
+      // Resolve teamId: use directly if provided, else derive from workspaceId
+      let teamId = input.teamId;
+      if (!teamId && input.workspaceId) {
+        const [ws] = await ctx.db
+          .select({ teamId: workspaces.teamId })
+          .from(workspaces)
+          .where(eq(workspaces.id, input.workspaceId))
+          .limit(1);
+        teamId = ws?.teamId;
+      }
+      if (!teamId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'teamId or workspaceId is required' });
+      }
+
       const [agent] = await ctx.db
         .insert(agents)
         .values({
-          workspaceId: input.workspaceId,
+          teamId,
           name: input.name,
           agentType: input.agentType,
           machineId: input.machineId,

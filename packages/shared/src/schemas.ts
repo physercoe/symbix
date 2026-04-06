@@ -1,8 +1,33 @@
 import { z } from 'zod';
-import { AGENT_CLASSES, AGENT_TYPES, CHANNEL_TYPES, CONTENT_TYPES, MACHINE_TYPES, MEMBER_TYPES, WORKSPACE_ROLES } from './constants.js';
+import { AGENT_CLASSES, AGENT_TYPES, CHANNEL_TYPES, CONTENT_TYPES, MACHINE_TYPES, MEMBER_TYPES, WORKSPACE_ROLES, TEAM_ROLES, SPEC_VISIBILITY } from './constants.js';
+
+// Team schemas
+export const createTeamSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().optional(),
+});
+
+export const updateTeamSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().optional(),
+  settings: z.record(z.unknown()).optional(),
+});
+
+export const addTeamMemberSchema = z.object({
+  teamId: z.string().uuid(),
+  email: z.string().email(),
+  role: z.enum(TEAM_ROLES).default('member'),
+});
+
+export const updateTeamMemberRoleSchema = z.object({
+  teamId: z.string().uuid(),
+  userId: z.string().uuid(),
+  role: z.enum(TEAM_ROLES),
+});
 
 // Workspace schemas
 export const createWorkspaceSchema = z.object({
+  teamId: z.string().uuid(),
   name: z.string().min(1).max(100),
 });
 
@@ -48,7 +73,7 @@ export const listMessagesSchema = z.object({
 
 // Agent schemas
 export const createAgentSchema = z.object({
-  workspaceId: z.string().uuid(),
+  teamId: z.string().uuid(),
   name: z.string().min(1).max(100),
   roleDescription: z.string(),
   systemPrompt: z.string(),
@@ -64,12 +89,18 @@ export const createAgentSchema = z.object({
 });
 
 export const updateAgentSchema = createAgentSchema
-  .omit({ workspaceId: true })
+  .omit({ teamId: true })
   .partial();
 
 // Spawn agent on a machine schema
-export const spawnAgentSchema = z.object({
+export const deployAgentSchema = z.object({
+  agentId: z.string().uuid(),
   workspaceId: z.string().uuid(),
+  config: z.record(z.unknown()).optional(),
+});
+
+export const spawnAgentSchema = z.object({
+  teamId: z.string().uuid(),
   machineId: z.string().uuid(),
   name: z.string().min(1).max(100),
   agentType: z.enum(AGENT_TYPES).default('cli_agent'),
@@ -79,7 +110,7 @@ export const spawnAgentSchema = z.object({
 
 // Machine schemas
 export const registerMachineSchema = z.object({
-  workspaceId: z.string().uuid(),
+  teamId: z.string().uuid(),
   name: z.string().min(1).max(100),
   machineType: z.enum(MACHINE_TYPES).default('desktop'),
   metadata: z.record(z.unknown()).optional(),
@@ -136,3 +167,8 @@ export type UpdateAgentMemoryInput = z.infer<typeof updateAgentMemorySchema>;
 export type AddChannelMemberInput = z.infer<typeof addChannelMemberSchema>;
 export type AddWorkspaceMemberInput = z.infer<typeof addWorkspaceMemberSchema>;
 export type InviteToWorkspaceInput = z.infer<typeof inviteToWorkspaceSchema>;
+export type CreateTeamInput = z.infer<typeof createTeamSchema>;
+export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
+export type AddTeamMemberInput = z.infer<typeof addTeamMemberSchema>;
+export type UpdateTeamMemberRoleInput = z.infer<typeof updateTeamMemberRoleSchema>;
+export type DeployAgentInput = z.infer<typeof deployAgentSchema>;

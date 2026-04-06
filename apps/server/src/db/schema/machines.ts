@@ -1,9 +1,9 @@
 import { pgTable, uuid, varchar, jsonb, timestamp } from 'drizzle-orm/pg-core';
-import { workspaces } from './workspaces';
+import { teams } from './teams';
 
 export const machines = pgTable('machines', {
   id: uuid('id').primaryKey().defaultRandom(),
-  workspaceId: uuid('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   machineType: varchar('machine_type', { length: 20 }).notNull().default('desktop'),
   apiKey: varchar('api_key', { length: 255 }).notNull().unique(),

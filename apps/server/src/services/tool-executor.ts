@@ -14,6 +14,7 @@ import {
   pinnedMessages,
   messages,
   workspaceItems,
+  workspaceMembers,
   specs,
   channels,
   channelMembers,
@@ -340,7 +341,7 @@ async function dispatch(
     case 'search_specs': {
       const limit = Math.min(Number(args.limit) || 20, 50);
       const conditions = [
-        or(eq(specs.visibility, 'public'), eq(specs.visibility, 'workspace'))!,
+        or(eq(specs.visibility, 'public'), eq(specs.visibility, 'workspace'), eq(specs.visibility, 'team'))!,
       ];
 
       if (args.specType && typeof args.specType === 'string') {
@@ -378,7 +379,7 @@ async function dispatch(
         .where(
           and(
             eq(specs.id, String(args.id)),
-            or(eq(specs.visibility, 'public'), eq(specs.visibility, 'workspace'))!,
+            or(eq(specs.visibility, 'public'), eq(specs.visibility, 'workspace'), eq(specs.visibility, 'team'))!,
           ),
         )
         .limit(1);
@@ -452,11 +453,8 @@ async function dispatch(
     }
 
     case 'list_workspace_agents': {
-      const conditions = [eq(agents.workspaceId, ctx.workspaceId)];
-      if (args.status && typeof args.status === 'string') {
-        conditions.push(eq(agents.status, args.status));
-      }
-      const rows = await db
+      // Agents are team-scoped; query via workspace_members to find deployed agents
+      const deployed = await db
         .select({
           id: agents.id,
           name: agents.name,
@@ -467,10 +465,17 @@ async function dispatch(
           llmProvider: agents.llmProvider,
           llmModel: agents.llmModel,
         })
-        .from(agents)
-        .where(and(...conditions))
+        .from(workspaceMembers)
+        .innerJoin(agents, eq(agents.id, workspaceMembers.agentId))
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, ctx.workspaceId),
+            eq(workspaceMembers.memberType, 'agent'),
+            ...(args.status && typeof args.status === 'string' ? [eq(agents.status, args.status)] : []),
+          ),
+        )
         .orderBy(agents.name);
-      return rows;
+      return deployed;
     }
 
     // ── Message Search ─────────────────────────────────────────

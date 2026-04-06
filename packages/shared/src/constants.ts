@@ -47,3 +47,25 @@ export type AgentType = typeof AGENT_TYPES[number];
 // Workspace roles
 export const WORKSPACE_ROLES = ['owner', 'member', 'observer'] as const;
 export type WorkspaceRole = typeof WORKSPACE_ROLES[number];
+
+// Team roles
+export const TEAM_ROLES = ['owner', 'admin', 'member', 'viewer'] as const;
+export type TeamRole = typeof TEAM_ROLES[number];
+
+// Activity event types (for metrics/monitoring)
+export const ACTIVITY_EVENT_TYPES = [
+  'agent_wake',
+  'agent_sleep',
+  'agent_error',
+  'agent_response',
+  'tool_call',
+  'member_join',
+  'member_leave',
+  'workspace_create',
+  'workspace_delete',
+] as const;
+export type ActivityEventType = typeof ACTIVITY_EVENT_TYPES[number];
+
+// Spec visibility
+export const SPEC_VISIBILITY = ['private', 'team', 'workspace', 'public'] as const;
+export type SpecVisibility = typeof SPEC_VISIBILITY[number];

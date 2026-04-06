@@ -1,11 +1,13 @@
 import { pgTable, uuid, varchar, text, jsonb, integer, timestamp, index } from 'drizzle-orm/pg-core';
 import { users } from './users';
+import { teams } from './teams';
 
 export const specs = pgTable(
   'specs',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }),
     specType: varchar('spec_type', { length: 20 }).notNull(), // 'agent' | 'workspace'
     name: varchar('name', { length: 200 }).notNull(),
     version: varchar('version', { length: 20 }).default('1.0'),
