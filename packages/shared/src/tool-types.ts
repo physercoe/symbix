@@ -1,4 +1,4 @@
-import type { ToolGroup, AccessLevel } from './permissions.js';
+import type { ToolGroup, AccessLevel } from './permissions';
 
 /** Tool definition — matches the LLM package's ToolDefinition interface */
 export interface ToolDefinition {

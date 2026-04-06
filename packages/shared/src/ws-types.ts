@@ -1,4 +1,4 @@
-import type { Message } from './types.js';
+import type { Message } from './types';
 
 // Client → Server messages
 export interface SubscribeMessage {

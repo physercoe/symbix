@@ -1,4 +1,4 @@
-import type { ToolDefinition } from './tool-types.js';
+import type { ToolDefinition } from './tool-types';
 
 /**
  * Built-in tools that hosted agents can use to interact with channel resources.

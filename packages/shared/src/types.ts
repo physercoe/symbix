@@ -1,4 +1,4 @@
-import type { AgentClass, AgentStatus, AgentType, ChannelType, ContentType, MachineStatus, MachineType, MemberType, SenderType, WorkspaceRole, TeamRole, ActivityEventType, SpecVisibility } from './constants.js';
+import type { AgentClass, AgentStatus, AgentType, ChannelType, ContentType, MachineStatus, MachineType, MemberType, SenderType, WorkspaceRole, TeamRole, ActivityEventType, SpecVisibility } from './constants';
 
 export interface User {
   id: string;
@@ -170,7 +170,7 @@ export interface UserItem {
 }
 
 export type SpecType = 'agent' | 'workspace';
-export type { SpecVisibility } from './constants.js';
+export type { SpecVisibility } from './constants';
 
 export interface ActivityEvent {
   id: string;
