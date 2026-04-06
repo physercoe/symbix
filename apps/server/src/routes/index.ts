@@ -7,6 +7,8 @@ import { agentsRouter } from './agents.js';
 import { devicesRouter } from './devices.js';
 import { machinesRouter } from './machines.js';
 import { channelItemsRouter } from './channel-items.js';
+import { workspaceItemsRouter } from './workspace-items.js';
+import { userItemsRouter } from './user-items.js';
 
 export const appRouter = router({
   auth: authRouter,
@@ -17,6 +19,8 @@ export const appRouter = router({
   devices: devicesRouter,
   machines: machinesRouter,
   channelItems: channelItemsRouter,
+  workspaceItems: workspaceItemsRouter,
+  userItems: userItemsRouter,
 });
 
 export type AppRouter = typeof appRouter;

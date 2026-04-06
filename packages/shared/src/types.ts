@@ -113,3 +113,37 @@ export interface DeviceEvent {
   payload: Record<string, unknown>;
   createdAt: string;
 }
+
+export type WorkspaceItemType = 'doc' | 'file' | 'link' | 'template';
+
+export interface WorkspaceItem {
+  id: string;
+  workspaceId: string;
+  type: WorkspaceItemType;
+  title: string;
+  content: string | null;
+  url: string | null;
+  category: string | null;
+  status: string | null;
+  metadata: Record<string, unknown> | null;
+  createdBy: string;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export type UserItemType = 'note' | 'saved' | 'snippet';
+
+export interface UserItem {
+  id: string;
+  userId: string;
+  type: UserItemType;
+  title: string;
+  content: string | null;
+  language: string | null;
+  sourceChannelId: string | null;
+  sourceMessageId: string | null;
+  category: string | null;
+  metadata: Record<string, unknown> | null;
+  updatedAt: string;
+  createdAt: string;
+}

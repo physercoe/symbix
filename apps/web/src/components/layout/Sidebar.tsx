@@ -612,6 +612,24 @@ export function Sidebar() {
               />
             )}
             <Separator className="my-2" />
+            {/* Workspace Library */}
+            <div className="mt-1">
+              <Link
+                href={`/workspaces/${workspaceId}/library`}
+                className={cn(
+                  'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+                  pathname.includes('/library')
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                )}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg>
+                Library
+              </Link>
+            </div>
+            <Separator className="my-2" />
             <AgentSection workspaceId={workspaceId} onSpawnAgent={() => setSpawnAgentOpen(true)} />
             <MachineSection workspaceId={workspaceId} onAddMachine={() => setAddMachineOpen(true)} />
             <MembersSection workspaceId={workspaceId} />
@@ -657,6 +675,24 @@ export function Sidebar() {
       )}
 
       <Separator />
+
+      {/* Personal items link */}
+      <div className="px-3 py-1">
+        <Link
+          href="/personal"
+          className={cn(
+            'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+            pathname === '/personal'
+              ? 'bg-accent text-accent-foreground'
+              : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+          )}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          My Items
+        </Link>
+      </div>
 
       {/* User section */}
       <div className="flex items-center gap-2 p-3">
