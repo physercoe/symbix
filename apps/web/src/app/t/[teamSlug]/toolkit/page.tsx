@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { SpecEditor } from '@/components/toolkit/SpecEditor';
 import { ToolkitItemList } from '@/components/toolkit/ToolkitItemList';
@@ -15,8 +16,20 @@ const tabs = [
 
 type TabKey = (typeof tabs)[number]['key'];
 
+const validTabs = new Set<string>(tabs.map((t) => t.key));
+
 export default function ToolkitPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>('specs');
+  const searchParams = useSearchParams();
+  const paramTab = searchParams.get('tab');
+  const initialTab = paramTab && validTabs.has(paramTab) ? (paramTab as TabKey) : 'specs';
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+
+  // Sync with URL when search params change (sidebar navigation)
+  useEffect(() => {
+    if (paramTab && validTabs.has(paramTab)) {
+      setActiveTab(paramTab as TabKey);
+    }
+  }, [paramTab]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
