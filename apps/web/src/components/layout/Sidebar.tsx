@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
@@ -532,11 +532,48 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUser();
-  const workspaceId = params.workspaceId as string | undefined;
+  const paramWorkspaceId = params.workspaceId as string | undefined;
 
-  // Determine active tab from URL
+  // Persist last workspace so Toolkit tab can switch back to it
+  const [lastWorkspaceId, setLastWorkspaceId] = useState<string | undefined>(() => {
+    if (typeof window === 'undefined') return undefined;
+    return localStorage.getItem('symbix:lastWorkspaceId') ?? undefined;
+  });
+
+  const workspaceId = paramWorkspaceId ?? lastWorkspaceId;
+
+  // Save to localStorage whenever we're on a workspace route
+  useEffect(() => {
+    if (paramWorkspaceId) {
+      setLastWorkspaceId(paramWorkspaceId);
+      localStorage.setItem('symbix:lastWorkspaceId', paramWorkspaceId);
+    }
+  }, [paramWorkspaceId]);
+
+  // Sync sidebar tab with URL
   const isToolkitPath = pathname.startsWith('/toolkit') || pathname.startsWith('/personal');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>(isToolkitPath ? 'toolkit' : 'workspace');
+
+  useEffect(() => {
+    if (isToolkitPath && sidebarTab !== 'toolkit') setSidebarTab('toolkit');
+    else if (!isToolkitPath && sidebarTab !== 'workspace') setSidebarTab('workspace');
+  }, [pathname, isToolkitPath]);
+
+  // When clicking Workspace tab, navigate to last workspace if not already there
+  const handleWorkspaceTab = useCallback(() => {
+    setSidebarTab('workspace');
+    if (isToolkitPath && workspaceId) {
+      router.push(`/workspaces/${workspaceId}`);
+    }
+  }, [isToolkitPath, workspaceId, router]);
+
+  // When clicking Toolkit tab, navigate to toolkit if not already there
+  const handleToolkitTab = useCallback(() => {
+    setSidebarTab('toolkit');
+    if (!isToolkitPath) {
+      router.push('/toolkit/specs');
+    }
+  }, [isToolkitPath, router]);
 
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
@@ -553,6 +590,15 @@ export function Sidebar() {
     },
   });
 
+  // Also set lastWorkspaceId from first workspace if we don't have one yet
+  useEffect(() => {
+    if (!lastWorkspaceId && workspaces && workspaces.length > 0) {
+      const first = workspaces[0].id;
+      setLastWorkspaceId(first);
+      localStorage.setItem('symbix:lastWorkspaceId', first);
+    }
+  }, [workspaces, lastWorkspaceId]);
+
   const currentWorkspace = workspaces?.find((w) => w.id === workspaceId);
 
   return (
@@ -562,7 +608,7 @@ export function Sidebar() {
         <div className="flex rounded-md bg-accent/30 p-0.5">
           <button
             type="button"
-            onClick={() => setSidebarTab('workspace')}
+            onClick={handleWorkspaceTab}
             className={cn(
               'flex-1 rounded px-2 py-1 text-xs font-medium transition-colors',
               sidebarTab === 'workspace'
@@ -574,7 +620,7 @@ export function Sidebar() {
           </button>
           <button
             type="button"
-            onClick={() => setSidebarTab('toolkit')}
+            onClick={handleToolkitTab}
             className={cn(
               'flex-1 rounded px-2 py-1 text-xs font-medium transition-colors',
               sidebarTab === 'toolkit'
@@ -593,7 +639,7 @@ export function Sidebar() {
           <WorkspaceSelector
             workspaces={workspaces}
             currentWorkspace={currentWorkspace}
-            workspaceId={workspaceId}
+            workspaceId={paramWorkspaceId ?? lastWorkspaceId}
             onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
             onDeleteWorkspace={() => {
               if (currentWorkspace && confirm(`Delete workspace "${currentWorkspace.name}"? All data will be lost.`)) {
