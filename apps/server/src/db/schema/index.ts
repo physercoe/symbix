@@ -12,3 +12,4 @@ export * from './pinned-messages';
 export * from './channel-items';
 export * from './workspace-items';
 export * from './user-items';
+export * from './specs';

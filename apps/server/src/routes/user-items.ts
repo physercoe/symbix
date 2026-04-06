@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc.js';
 import { userItems } from '../db/schema/index.js';
 
-const USER_ITEM_TYPES = ['note', 'saved', 'snippet'] as const;
+const USER_ITEM_TYPES = ['insight', 'reference', 'pattern', 'asset'] as const;
 
 export const userItemsRouter = router({
   list: protectedProcedure
@@ -40,6 +40,7 @@ export const userItemsRouter = router({
       title: z.string().min(1).max(500),
       content: z.string().optional(),
       language: z.string().max(50).optional(),
+      url: z.string().optional(),
       sourceChannelId: z.string().uuid().optional(),
       sourceMessageId: z.string().uuid().optional(),
       category: z.string().max(100).optional(),
@@ -54,6 +55,7 @@ export const userItemsRouter = router({
           title: input.title,
           content: input.content,
           language: input.language,
+          url: input.url,
           sourceChannelId: input.sourceChannelId,
           sourceMessageId: input.sourceMessageId,
           category: input.category,
@@ -69,6 +71,7 @@ export const userItemsRouter = router({
       title: z.string().min(1).max(500).optional(),
       content: z.string().optional(),
       language: z.string().max(50).optional(),
+      url: z.string().optional(),
       category: z.string().max(100).optional(),
       metadata: z.record(z.unknown()).optional(),
     }))
@@ -91,7 +94,7 @@ export const userItemsRouter = router({
       return { success: true };
     }),
 
-  // Shortcut: save a message as a personal bookmark
+  // Shortcut: save a message as a reference
   saveMessage: protectedProcedure
     .input(z.object({
       channelId: z.string().uuid(),
@@ -105,7 +108,7 @@ export const userItemsRouter = router({
         .insert(userItems)
         .values({
           userId: ctx.userId,
-          type: 'saved',
+          type: 'reference',
           title,
           content: input.content,
           sourceChannelId: input.channelId,

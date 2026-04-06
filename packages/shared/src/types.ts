@@ -131,7 +131,7 @@ export interface WorkspaceItem {
   createdAt: string;
 }
 
-export type UserItemType = 'note' | 'saved' | 'snippet';
+export type UserItemType = 'insight' | 'reference' | 'pattern' | 'asset';
 
 export interface UserItem {
   id: string;
@@ -140,10 +140,66 @@ export interface UserItem {
   title: string;
   content: string | null;
   language: string | null;
+  url: string | null;
   sourceChannelId: string | null;
   sourceMessageId: string | null;
   category: string | null;
   metadata: Record<string, unknown> | null;
   updatedAt: string;
   createdAt: string;
+}
+
+export type SpecType = 'agent' | 'workspace';
+export type SpecVisibility = 'private' | 'workspace' | 'public';
+
+export interface Spec {
+  id: string;
+  userId: string;
+  specType: SpecType;
+  name: string;
+  version: string | null;
+  description: string | null;
+  content: Record<string, unknown>;
+  visibility: SpecVisibility;
+  category: string | null;
+  usageCount: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
+// ── Spec content structures (for reference, stored as JSON) ──
+
+export interface AgentSpecContent {
+  identity: {
+    role: string;
+    personality: string[];
+  };
+  capabilities: {
+    tools: string[];
+    domains: string[];
+    languages: string[];
+  };
+  behavior: {
+    always: string[];
+    never: string[];
+    triggers: Record<string, string>;
+  };
+  communication: {
+    tone: string;
+    verbosity: 'concise' | 'balanced' | 'detailed';
+    format: string[];
+  };
+  llm: {
+    provider: string;
+    model: string;
+  };
+}
+
+export interface WorkspaceSpecContent {
+  objectives: string[];
+  rules: string[];
+  roles: Array<{ name: string; permissions: string[] }>;
+  channels: Array<{ name: string; type: string; purpose: string; agents?: string[] }>;
+  agents: Array<{ spec: string; deploy_to: string[]; overrides?: Record<string, unknown> }>;
+  knowledge_seed: Array<{ title: string; type: string }>;
 }

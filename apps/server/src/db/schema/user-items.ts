@@ -6,12 +6,13 @@ export const userItems = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-    type: varchar('type', { length: 20 }).notNull(), // 'note' | 'saved' | 'snippet'
+    type: varchar('type', { length: 20 }).notNull(), // 'insight' | 'reference' | 'pattern' | 'asset'
     title: varchar('title', { length: 500 }).notNull(),
-    content: text('content'), // body text (markdown for notes/snippets)
-    language: varchar('language', { length: 50 }), // for snippets: 'typescript', 'python', etc.
-    sourceChannelId: uuid('source_channel_id'), // for saved messages: origin channel
-    sourceMessageId: uuid('source_message_id'), // for saved messages: origin message
+    content: text('content'), // body text (markdown for insights/patterns)
+    language: varchar('language', { length: 50 }), // for patterns: 'typescript', 'python', etc.
+    url: text('url'), // for assets: storage path or URL
+    sourceChannelId: uuid('source_channel_id'), // for references: origin channel
+    sourceMessageId: uuid('source_message_id'), // for references: origin message
     category: varchar('category', { length: 100 }), // user-defined grouping
     metadata: jsonb('metadata'), // tags[], senderName, etc.
     updatedAt: timestamp('updated_at').defaultNow().notNull(),

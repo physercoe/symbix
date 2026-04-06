@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function PersonalRedirect() {
+export default function ToolkitIndex() {
   const router = useRouter();
-  useEffect(() => { router.replace('/toolkit/insights'); }, [router]);
+  useEffect(() => { router.replace('/toolkit/specs'); }, [router]);
   return null;
 }

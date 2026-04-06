@@ -9,6 +9,7 @@ import { machinesRouter } from './machines.js';
 import { channelItemsRouter } from './channel-items.js';
 import { workspaceItemsRouter } from './workspace-items.js';
 import { userItemsRouter } from './user-items.js';
+import { specsRouter } from './specs.js';
 
 export const appRouter = router({
   auth: authRouter,
@@ -21,6 +22,7 @@ export const appRouter = router({
   channelItems: channelItemsRouter,
   workspaceItems: workspaceItemsRouter,
   userItems: userItemsRouter,
+  specs: specsRouter,
 });
 
 export type AppRouter = typeof appRouter;

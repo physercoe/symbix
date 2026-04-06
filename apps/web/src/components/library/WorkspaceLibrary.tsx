@@ -99,8 +99,8 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
       <div className="shrink-0 border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold">Library</h1>
-            <p className="text-sm text-muted-foreground">Shared docs, files, links, and templates</p>
+            <h1 className="text-lg font-semibold">Knowledge</h1>
+            <p className="text-sm text-muted-foreground">Shared docs, files, links, and templates for this workspace</p>
           </div>
           <div className="flex gap-1">
             {(['doc', 'file', 'link', 'template'] as const).map((type) => (
