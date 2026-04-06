@@ -1,5 +1,12 @@
-import { TeamShell } from '@/components/layout/TeamShell';
+'use client';
+
+import { AppShell } from '@/components/layout/AppShell';
+import { TeamSidebar } from '@/components/layout/TeamSidebar';
 
 export default function TeamLayout({ children }: { children: React.ReactNode }) {
-  return <TeamShell>{children}</TeamShell>;
+  return (
+    <AppShell defaultSidebar={<TeamSidebar />}>
+      {children}
+    </AppShell>
+  );
 }

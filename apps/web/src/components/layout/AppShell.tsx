@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { Sidebar } from './Sidebar';
+import { SidebarProvider, useSidebar } from './sidebar-context';
 import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { wsManager } from '@/lib/ws';
@@ -59,9 +59,10 @@ function HamburgerIcon() {
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function ShellInner({ defaultSidebar, children }: { defaultSidebar: ReactNode; children: ReactNode }) {
   const { getToken } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { sidebar: overrideSidebar } = useSidebar();
 
   const addMessage = useMessageStore((s) => s.addMessage);
   const setAgentStatus = useAgentStore((s) => s.setStatus);
@@ -97,7 +98,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         };
       };
       if (d.message) {
-        // Clear streaming state when agent's final message arrives
         if (d.message.senderType === 'agent') {
           clearStreaming(d.message.senderId);
         }
@@ -135,25 +135,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [getToken, addMessage, setAgentStatus, appendChunk, clearStreaming, setOnline]);
 
+  const activeSidebar = overrideSidebar ?? defaultSidebar;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Desktop sidebar — always visible at md+ */}
+      {/* Desktop sidebar */}
       <div className="hidden md:flex">
         <SidebarErrorBoundary>
-          <Sidebar />
+          {activeSidebar}
         </SidebarErrorBoundary>
       </div>
 
-      {/* Mobile sidebar — rendered inside a Sheet drawer */}
+      {/* Mobile sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen} side="left">
         <SidebarErrorBoundary>
-          <Sidebar />
+          {activeSidebar}
         </SidebarErrorBoundary>
       </Sheet>
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile top bar */}
         <div className="flex h-14 items-center border-b px-4 md:hidden">
           <Button
             variant="ghost"
@@ -171,5 +172,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+  );
+}
+
+export function AppShell({ defaultSidebar, children }: { defaultSidebar: ReactNode; children: ReactNode }) {
+  return (
+    <SidebarProvider>
+      <ShellInner defaultSidebar={defaultSidebar}>{children}</ShellInner>
+    </SidebarProvider>
   );
 }
