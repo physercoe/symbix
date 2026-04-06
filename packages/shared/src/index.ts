@@ -5,3 +5,4 @@ export * from './schemas.js';
 export * from './ws-types.js';
 export * from './tool-types.js';
 export * from './tools.js';
+export * from './permissions.js';

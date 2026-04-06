@@ -7,6 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import {
+  PERMISSION_PRESETS,
+  PERMISSION_PRESET_NAMES,
+  TOOL_GROUPS,
+  TOOL_GROUP_LABELS,
+  TOOL_GROUP_DESCRIPTIONS,
+  ACCESS_LEVELS,
+  resolvePermissions,
+  detectPreset,
+} from '@symbix/shared';
+import type { AgentPermissions, PermissionPreset, AccessLevel, ToolGroup } from '@symbix/shared';
 
 interface AgentData {
   id: string;
@@ -51,6 +62,9 @@ export function AgentPanel({ agent, onClose }: Props) {
   const [autoRespond, setAutoRespond] = useState(
     (agent.config as Record<string, unknown>)?.autoRespond === true,
   );
+  const [permissions, setPermissions] = useState<AgentPermissions>(
+    resolvePermissions(agent.config),
+  );
   const utils = trpc.useUtils();
 
   const updateAgent = trpc.agents.update.useMutation({
@@ -82,7 +96,7 @@ export function AgentPanel({ agent, onClose }: Props) {
       llmModel,
       llmBaseUrl: llmBaseUrl.trim() || undefined,
       llmApiKey: llmApiKey.trim() || undefined,
-      config: { ...agent.config, autoRespond },
+      config: { ...agent.config, autoRespond, permissions },
     });
   };
 
@@ -171,6 +185,43 @@ export function AgentPanel({ agent, onClose }: Props) {
               Auto-respond to all messages (no @mention needed)
             </label>
           </div>
+          <Separator />
+          <p className="text-xs font-medium">Permissions</p>
+          <div className="grid grid-cols-2 gap-1">
+            {PERMISSION_PRESET_NAMES.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setPermissions({ ...PERMISSION_PRESETS[preset] })}
+                className={cn(
+                  'rounded border px-2 py-1 text-[10px] transition-colors',
+                  detectPreset(permissions) === preset
+                    ? 'border-primary bg-primary/10'
+                    : 'border-input text-muted-foreground hover:bg-accent',
+                )}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-1.5">
+            {TOOL_GROUPS.map((group) => (
+              <div key={group} className="flex items-center justify-between gap-2">
+                <span className="text-[10px] truncate">{TOOL_GROUP_LABELS[group]}</span>
+                <select
+                  value={permissions[group]}
+                  onChange={(e) => setPermissions({ ...permissions, [group]: e.target.value as AccessLevel })}
+                  className="rounded border border-input bg-background px-1.5 py-0.5 text-[10px] shrink-0 w-24"
+                >
+                  {ACCESS_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {level === 'none' ? 'None' : level === 'read' ? 'Read' : 'Read & Write'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
         </div>
         <Button
           size="sm"
@@ -232,6 +283,31 @@ export function AgentPanel({ agent, onClose }: Props) {
           </div>
         </div>
       )}
+
+      {/* Permissions summary */}
+      <div>
+        <p className="text-xs text-muted-foreground mb-1">Permissions</p>
+        <div className="flex flex-wrap gap-1">
+          {(() => {
+            const perms = resolvePermissions(agent.config);
+            const preset = detectPreset(perms);
+            if (preset !== 'custom') {
+              return (
+                <Badge variant="secondary" className="text-[10px] capitalize">{preset}</Badge>
+              );
+            }
+            return TOOL_GROUPS
+              .filter((g) => perms[g] !== 'none')
+              .map((g) => (
+                <Badge key={g} variant="outline" className={cn('text-[10px]',
+                  perms[g] === 'read_write' ? 'text-green-400 border-green-400/30' : 'text-blue-400 border-blue-400/30',
+                )}>
+                  {TOOL_GROUP_LABELS[g]}: {perms[g] === 'read_write' ? 'rw' : 'r'}
+                </Badge>
+              ));
+          })()}
+        </div>
+      </div>
 
       <Separator />
 

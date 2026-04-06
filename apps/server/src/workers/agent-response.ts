@@ -9,7 +9,8 @@ import type { ChatMessage, ChatChunk } from '@symbix/llm';
 import type { Agent } from '../db/schema/agents.js';
 import { agentResponseQueue } from '../services/bull.js';
 import { executeTool } from '../services/tool-executor.js';
-import { CHANNEL_TOOLS, WORKSPACE_TOOLS } from '@symbix/shared';
+import { ALL_AGENT_TOOLS, resolvePermissions, filterToolsByPermissions, hasToolPermission } from '@symbix/shared';
+import type { AgentPermissions } from '@symbix/shared';
 
 const MAX_TOOL_ROUNDS = 10;
 
@@ -124,17 +125,25 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
     ? `\n\nYour persistent memory:\n${memory.map((m) => `- ${m.key}: ${m.content}`).join('\n')}`
     : '';
 
+  // Resolve permissions from config (supports legacy boolean flags + new granular permissions)
   const agentConfig = (agent.config as Record<string, unknown>) ?? {};
   const caps = agent.capabilities ?? [];
-  const channelToolsEnabled = caps.includes('channel_tools') || agentConfig.channelTools === true;
-  const workspaceToolsEnabled = caps.includes('workspace_tools') || agentConfig.workspaceTools === true || channelToolsEnabled;
+
+  // Legacy compat: if capabilities array has tool flags, merge into config for resolvePermissions
+  const configForPerms = { ...agentConfig };
+  if (caps.includes('channel_tools')) configForPerms.channelTools = true;
+  if (caps.includes('workspace_tools')) configForPerms.workspaceTools = true;
+  const permissions: AgentPermissions = resolvePermissions(configForPerms);
+
+  // Filter all tools to only those this agent has permission for
+  const allowedTools = filterToolsByPermissions(ALL_AGENT_TOOLS, permissions);
 
   let toolInstructions = '';
-  if (channelToolsEnabled) {
-    toolInstructions += '\n\nYou have access to channel tools for managing tasks, docs, links, files, and pinned messages. Use them when the user asks you to create, update, list, or delete these resources. Always confirm what you did after using a tool.';
-  }
-  if (workspaceToolsEnabled) {
-    toolInstructions += '\n\nYou have access to workspace tools that let you search the workspace knowledge base (docs, files, links), browse specs (agent/workspace blueprints), list channels and their members, discover other agents, and search message history beyond your context window. Use these tools proactively when you need more context to answer questions.';
+  if (allowedTools.length > 0) {
+    const groupSummary = allowedTools
+      .map((t) => t.group)
+      .filter((g, i, arr) => g && arr.indexOf(g) === i);
+    toolInstructions = `\n\nYou have access to the following tool groups: ${groupSummary.join(', ')}. Use them when relevant to help the user. Always confirm what you did after using a tool.`;
   }
 
   const chatMessages: ChatMessage[] = [
@@ -150,17 +159,13 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
     })),
   ];
 
-  console.log(`[agent ${agent.name}] Context: ${chatMessages.length} msgs → ${agent.llmProvider}/${agent.llmModel}, channelTools=${channelToolsEnabled}, workspaceTools=${workspaceToolsEnabled}`);
+  console.log(`[agent ${agent.name}] Context: ${chatMessages.length} msgs → ${agent.llmProvider}/${agent.llmModel}, tools=${allowedTools.length}/${ALL_AGENT_TOOLS.length}`);
 
   const llm = createLLMForAgent(agent);
   let fullResponse = '';
 
   try {
-    const toolList = [
-      ...(channelToolsEnabled ? CHANNEL_TOOLS : []),
-      ...(workspaceToolsEnabled ? WORKSPACE_TOOLS : []),
-    ];
-    const tools = toolList.length > 0 ? toolList : undefined;
+    const tools = allowedTools.length > 0 ? allowedTools : undefined;
 
     // Tool-calling loop: LLM may call tools, we execute them, then continue
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -204,6 +209,7 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
           channelId,
           agentId,
           workspaceId: agent.workspaceId,
+          permissions,
         });
 
         console.log(`[agent ${agent.name}] Tool result (${isError ? 'ERROR' : 'OK'}): ${result.slice(0, 200)}`);

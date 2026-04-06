@@ -2,14 +2,16 @@ import type { ToolDefinition } from './tool-types.js';
 
 /**
  * Built-in tools that hosted agents can use to interact with channel resources.
- * These are injected into the LLM tool-calling API when the agent has the
- * corresponding capability enabled.
+ * Each tool is tagged with its permission group and required access level.
+ * The agent-response worker filters tools based on the agent's permissions.
  */
 
 export const CHANNEL_TOOLS: ToolDefinition[] = [
   // ── Tasks ──────────────────────────────────────────────────────
   {
     name: 'list_tasks',
+    group: 'channel_tasks',
+    requiredAccess: 'read',
     description:
       'List tasks in the current channel. Returns an array of task objects with id, title, status, and createdAt.',
     inputSchema: {
@@ -26,6 +28,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'create_task',
+    group: 'channel_tasks',
+    requiredAccess: 'read_write',
     description:
       'Create a new task in the current channel. Returns the created task object.',
     inputSchema: {
@@ -43,6 +47,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'update_task',
+    group: 'channel_tasks',
+    requiredAccess: 'read_write',
     description:
       'Update a task\'s title or status. Use list_tasks first to find the task id.',
     inputSchema: {
@@ -61,6 +67,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'delete_task',
+    group: 'channel_tasks',
+    requiredAccess: 'read_write',
     description: 'Delete a task by id.',
     inputSchema: {
       type: 'object',
@@ -74,6 +82,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   // ── Docs ───────────────────────────────────────────────────────
   {
     name: 'list_docs',
+    group: 'channel_docs',
+    requiredAccess: 'read',
     description:
       'List documents in the current channel. Returns id, title, and createdAt (not full content).',
     inputSchema: {
@@ -84,6 +94,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'get_doc',
+    group: 'channel_docs',
+    requiredAccess: 'read',
     description:
       'Get a document\'s full content by id. Use list_docs first to find the id.',
     inputSchema: {
@@ -96,6 +108,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'create_doc',
+    group: 'channel_docs',
+    requiredAccess: 'read_write',
     description:
       'Create a new document in the current channel. Content supports Markdown.',
     inputSchema: {
@@ -109,6 +123,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'update_doc',
+    group: 'channel_docs',
+    requiredAccess: 'read_write',
     description:
       'Update a document\'s title or content.',
     inputSchema: {
@@ -123,6 +139,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'delete_doc',
+    group: 'channel_docs',
+    requiredAccess: 'read_write',
     description: 'Delete a document by id.',
     inputSchema: {
       type: 'object',
@@ -136,6 +154,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   // ── Links ──────────────────────────────────────────────────────
   {
     name: 'list_links',
+    group: 'channel_links',
+    requiredAccess: 'read',
     description:
       'List saved links in the current channel. Returns id, title, url, and createdAt.',
     inputSchema: {
@@ -146,6 +166,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'save_link',
+    group: 'channel_links',
+    requiredAccess: 'read_write',
     description:
       'Save a link to the current channel.',
     inputSchema: {
@@ -159,6 +181,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'delete_link',
+    group: 'channel_links',
+    requiredAccess: 'read_write',
     description: 'Delete a saved link by id.',
     inputSchema: {
       type: 'object',
@@ -172,6 +196,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   // ── Files ──────────────────────────────────────────────────────
   {
     name: 'list_files',
+    group: 'channel_files',
+    requiredAccess: 'read',
     description:
       'List saved file references in the current channel. Returns id, title, url, and createdAt.',
     inputSchema: {
@@ -182,6 +208,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'save_file',
+    group: 'channel_files',
+    requiredAccess: 'read_write',
     description:
       'Save a file reference to the current channel (metadata only — does not upload binary data).',
     inputSchema: {
@@ -195,6 +223,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'delete_file',
+    group: 'channel_files',
+    requiredAccess: 'read_write',
     description: 'Delete a saved file reference by id.',
     inputSchema: {
       type: 'object',
@@ -208,6 +238,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   // ── Pinned Messages ────────────────────────────────────────────
   {
     name: 'list_pins',
+    group: 'channel_pins',
+    requiredAccess: 'read',
     description:
       'List pinned messages in the current channel. Returns pin id, message content, sender info, and pinnedAt.',
     inputSchema: {
@@ -218,6 +250,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'pin_message',
+    group: 'channel_pins',
+    requiredAccess: 'read_write',
     description:
       'Pin a message in the current channel by message id.',
     inputSchema: {
@@ -230,6 +264,8 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'unpin_message',
+    group: 'channel_pins',
+    requiredAccess: 'read_write',
     description:
       'Unpin a message. Requires the pin id (not the message id). Use list_pins to find pin ids.',
     inputSchema: {
@@ -247,14 +283,13 @@ export const CHANNEL_TOOLS_MAP = new Map(CHANNEL_TOOLS.map((t) => [t.name, t]));
 
 /**
  * Workspace-level tools that give agents visibility beyond their current channel.
- * These tools are read-heavy — agents can query workspace knowledge, specs,
- * channels, members, and search messages, but write access is limited to
- * contributing knowledge docs.
  */
 export const WORKSPACE_TOOLS: ToolDefinition[] = [
   // ── Knowledge (Workspace Items) ─────────────────────────────
   {
     name: 'search_knowledge',
+    group: 'knowledge',
+    requiredAccess: 'read',
     description:
       'Search the workspace knowledge base (docs, files, links, templates). Returns matching items with title, type, content preview, and url. Use this to find project documentation, reference materials, and shared resources.',
     inputSchema: {
@@ -283,6 +318,8 @@ export const WORKSPACE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'get_knowledge_item',
+    group: 'knowledge',
+    requiredAccess: 'read',
     description:
       'Get the full content of a workspace knowledge item by id. Use search_knowledge first to find the id.',
     inputSchema: {
@@ -295,6 +332,8 @@ export const WORKSPACE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'create_knowledge_doc',
+    group: 'knowledge',
+    requiredAccess: 'read_write',
     description:
       'Create a new document in the workspace knowledge base. Use this to contribute documentation, meeting notes, or research findings that should be shared across channels.',
     inputSchema: {
@@ -311,6 +350,8 @@ export const WORKSPACE_TOOLS: ToolDefinition[] = [
   // ── Specs ───────────────────────────────────────────────────
   {
     name: 'search_specs',
+    group: 'specs',
+    requiredAccess: 'read',
     description:
       'Search agent and workspace specs (blueprints/templates). Returns matching specs with name, type, description, and version. Specs define reusable agent configurations and workspace setups.',
     inputSchema: {
@@ -335,6 +376,8 @@ export const WORKSPACE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'get_spec',
+    group: 'specs',
+    requiredAccess: 'read',
     description:
       'Get the full structured content of a spec by id. Returns the complete JSON spec with all sections (identity, capabilities, behavior, etc.).',
     inputSchema: {
@@ -349,6 +392,8 @@ export const WORKSPACE_TOOLS: ToolDefinition[] = [
   // ── Workspace Structure ─────────────────────────────────────
   {
     name: 'list_channels',
+    group: 'workspace_structure',
+    requiredAccess: 'read',
     description:
       'List all channels in the workspace. Returns channel name, type (public/private/dm/device), and description. Useful for understanding workspace structure.',
     inputSchema: {
@@ -365,6 +410,8 @@ export const WORKSPACE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'list_channel_members',
+    group: 'workspace_structure',
+    requiredAccess: 'read',
     description:
       'List members (humans and agents) in a specific channel. Returns member name, type (user/agent), and join date.',
     inputSchema: {
@@ -380,6 +427,8 @@ export const WORKSPACE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'list_workspace_agents',
+    group: 'workspace_structure',
+    requiredAccess: 'read',
     description:
       'List all agents in the workspace with their status, role, and capabilities. Useful for knowing what other agents exist and what they do.',
     inputSchema: {
@@ -398,6 +447,8 @@ export const WORKSPACE_TOOLS: ToolDefinition[] = [
   // ── Message Search ──────────────────────────────────────────
   {
     name: 'search_messages',
+    group: 'messages',
+    requiredAccess: 'read',
     description:
       'Search messages across the current channel (beyond the 50-message context window). Returns matching messages with sender info and timestamps. Use this to find older conversations, decisions, or information.',
     inputSchema: {

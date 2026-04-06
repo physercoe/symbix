@@ -20,15 +20,19 @@ import {
   agents,
   users,
 } from '../db/schema/index.js';
+import { hasToolPermission } from '@symbix/shared';
+import type { AgentPermissions } from '@symbix/shared';
 
 export interface ToolContext {
   channelId: string;
   agentId: string;
   workspaceId: string;
+  permissions?: AgentPermissions;
 }
 
 /**
  * Execute a single tool call. Returns a JSON string result.
+ * Defense-in-depth: checks permissions even though the worker already filters tools.
  */
 export async function executeTool(
   name: string,
@@ -36,6 +40,13 @@ export async function executeTool(
   ctx: ToolContext,
 ): Promise<{ result: string; isError: boolean }> {
   try {
+    // Permission check (defense-in-depth)
+    if (ctx.permissions && !hasToolPermission(ctx.permissions, name)) {
+      return {
+        result: JSON.stringify({ error: `Permission denied: agent does not have access to tool "${name}"` }),
+        isError: true,
+      };
+    }
     const result = await dispatch(name, args, ctx);
     return { result: JSON.stringify(result), isError: false };
   } catch (err) {

@@ -4,35 +4,71 @@ This document describes the built-in **channel tools** available to hosted agent
 
 ---
 
-## Enabling Channel Tools
+## Permission System
 
-Channel tools are opt-in per agent. Enable them in one of two ways:
+Agent tool access is controlled by a **granular permission system**. Each tool belongs to a **group**, and each group has an **access level**: `none`, `read`, or `read_write`.
 
-### Option A: Capabilities array
+### Permission Groups
 
-When creating or updating an agent, include `"channel_tools"` in the capabilities array:
+| Group | Tools | Description |
+|-------|-------|-------------|
+| `channel_tasks` | list/create/update/delete tasks | Manage tasks in channels |
+| `channel_docs` | list/get/create/update/delete docs | Read and write channel documents |
+| `channel_links` | list/save/delete links | Manage channel links |
+| `channel_files` | list/save/delete files | Manage file references |
+| `channel_pins` | list/pin/unpin messages | Pin and unpin messages |
+| `knowledge` | search/get/create knowledge items | Workspace knowledge base |
+| `specs` | search/get specs | Agent and workspace blueprints (read-only) |
+| `workspace_structure` | list channels/members/agents | Workspace structure discovery |
+| `messages` | search messages | Message history search |
+
+### Access Levels
+
+| Level | Meaning |
+|-------|---------|
+| `none` | No access — tool is not available |
+| `read` | Can list/search/get — no modifications |
+| `read_write` | Full access — can create, update, and delete |
+
+### Presets
+
+Four built-in presets for quick setup:
+
+| Preset | Channel | Knowledge | Specs | Structure | Messages |
+|--------|---------|-----------|-------|-----------|----------|
+| **minimal** | none | none | none | none | none |
+| **observer** | read | read | read | read | read |
+| **standard** | read_write | read | read | read | read |
+| **full** | read_write | read_write | read | read | read |
+
+### Setting Permissions
+
+Permissions are stored in `agent.config.permissions` as a JSON object:
 
 ```json
 {
   "name": "Project Manager Bot",
-  "capabilities": ["channel_tools"],
-  "systemPrompt": "You are a project management assistant..."
+  "config": {
+    "permissions": {
+      "channel_tasks": "read_write",
+      "channel_docs": "read_write",
+      "channel_links": "read",
+      "channel_files": "none",
+      "channel_pins": "read_write",
+      "knowledge": "read",
+      "specs": "read",
+      "workspace_structure": "read",
+      "messages": "read"
+    }
+  }
 }
 ```
 
-### Option B: Config flag
+You can also set permissions via the UI when creating or editing an agent — choose a preset or customize per group.
 
-Set `channelTools: true` in the agent's config object:
+### Backward Compatibility
 
-```json
-{
-  "name": "Project Manager Bot",
-  "config": { "channelTools": true },
-  "systemPrompt": "You are a project management assistant..."
-}
-```
-
-When enabled, the agent receives all channel tool definitions in every LLM call. The LLM decides when to use them based on the conversation context.
+Legacy agents with `capabilities: ["channel_tools"]` or `config: { channelTools: true }` are automatically mapped to the **standard** preset. Agents with no tool config default to **minimal** (chat only).
 
 ---
 
@@ -356,25 +392,11 @@ Workspace tools give agents visibility beyond their current channel — they can
 
 ### Enabling Workspace Tools
 
-Workspace tools are **automatically enabled** when channel tools are enabled. You can also enable them independently:
+Workspace tools are controlled by the same permission system as channel tools. Set the appropriate groups (`knowledge`, `specs`, `workspace_structure`, `messages`) to `read` or `read_write` in the agent's permissions.
 
-```json
-{
-  "name": "Research Assistant",
-  "capabilities": ["workspace_tools"],
-  "systemPrompt": "You are a research assistant with access to the workspace knowledge base..."
-}
-```
+The **standard** and **full** presets include workspace read access by default. Use the **observer** preset for read-only access to everything, or **minimal** for chat-only agents.
 
-Or via config:
-
-```json
-{
-  "config": { "workspaceTools": true }
-}
-```
-
-> **Note:** Enabling `channel_tools` automatically enables `workspace_tools` too. You only need the separate `workspace_tools` capability if you want workspace-level read access *without* channel write tools.
+You can customize per group — for example, give an agent `knowledge: read_write` (can contribute docs) but `specs: none` (can't see blueprints).
 
 ---
 
