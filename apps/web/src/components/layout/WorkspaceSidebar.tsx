@@ -1,0 +1,321 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useParams, usePathname, useRouter } from 'next/navigation';
+import { useUser, UserButton } from '@clerk/nextjs';
+import { trpc } from '@/lib/trpc';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
+import { cn } from '@/lib/utils';
+import { CreateChannelDialog } from '@/components/channel/CreateChannelDialog';
+import { SpawnAgentDialog } from '@/components/agent/SpawnAgentDialog';
+
+function PlusIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+function BackIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+function SectionHeader({ label, onAdd, addTitle }: { label: string; onAdd?: () => void; addTitle?: string }) {
+  return (
+    <div className="flex items-center justify-between px-2 py-1">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+      {onAdd && (
+        <button type="button" onClick={onAdd} className="text-muted-foreground hover:text-foreground transition-colors" title={addTitle ?? 'Add'}>
+          <PlusIcon />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ChannelIcon({ type }: { type: string }) {
+  if (type === 'dm') return <span className="text-muted-foreground">@</span>;
+  return <span className="text-muted-foreground">#</span>;
+}
+
+const agentStatusDot: Record<string, string> = {
+  active: 'bg-green-500',
+  sleeping: 'bg-yellow-500',
+  offline: 'bg-gray-500',
+  error: 'bg-red-500',
+};
+
+const agentTypeLabel: Record<string, string> = {
+  hosted_bot: 'Bot',
+  cli_agent: 'CLI',
+  cloud_agent: 'Cloud',
+  device_agent: 'Device',
+};
+
+function copyToClipboard(text: string) {
+  navigator.clipboard.writeText(text).catch(() => {});
+}
+
+export function WorkspaceSidebar() {
+  const params = useParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useUser();
+  const teamSlug = params.teamSlug as string;
+  const workspaceId = params.workspaceId as string;
+
+  const { data: workspace } = trpc.workspaces.getById.useQuery({ id: workspaceId }, { enabled: !!workspaceId });
+  const { data: channels } = trpc.channels.list.useQuery({ workspaceId }, { enabled: !!workspaceId });
+  const { data: agents } = trpc.agents.list.useQuery({ workspaceId }, { enabled: !!workspaceId });
+  const { data: members } = trpc.workspaces.listMembers.useQuery({ workspaceId }, { enabled: !!workspaceId });
+  const utils = trpc.useUtils();
+
+  const [createChannelOpen, setCreateChannelOpen] = useState(false);
+  const [spawnAgentOpen, setSpawnAgentOpen] = useState(false);
+
+  const base = `/t/${teamSlug}/workspaces/${workspaceId}`;
+
+  const publicChannels = channels?.filter((c) => c.type === 'public') ?? [];
+  const privateChannels = channels?.filter((c) => c.type === 'private') ?? [];
+  const dmChannels = channels?.filter((c) => c.type === 'dm') ?? [];
+  const deviceChannels = channels?.filter((c) => c.type === 'device') ?? [];
+  const userMembers = members?.filter((m) => m.memberType === 'user') ?? [];
+
+  const openDM = trpc.channels.openDM.useMutation({
+    onSuccess: (channel) => {
+      utils.channels.list.invalidate({ workspaceId });
+      router.push(`${base}/channels/${channel.id}`);
+    },
+  });
+  const openUserDM = trpc.channels.openUserDM.useMutation({
+    onSuccess: (channel) => {
+      utils.channels.list.invalidate({ workspaceId });
+      router.push(`${base}/channels/${channel.id}`);
+    },
+  });
+  const deleteChannel = trpc.channels.delete.useMutation({
+    onSuccess: () => {
+      utils.channels.list.invalidate({ workspaceId });
+      router.push(base);
+    },
+  });
+  const wakeAgent = trpc.agents.wake.useMutation({ onSuccess: () => utils.agents.list.invalidate({ workspaceId }) });
+  const sleepAgent = trpc.agents.sleep.useMutation({ onSuccess: () => utils.agents.list.invalidate({ workspaceId }) });
+
+  return (
+    <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-r">
+      {/* Back to team + workspace name */}
+      <div className="shrink-0 border-b px-3 py-2">
+        <Link
+          href={`/t/${teamSlug}`}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-1"
+        >
+          <BackIcon />
+          <span>Back to team</span>
+        </Link>
+        <p className="text-sm font-semibold truncate">{workspace?.name ?? 'Workspace'}</p>
+      </div>
+
+      <ScrollArea className="flex-1 px-2 py-2">
+        {/* Channels */}
+        <ChannelGroup
+          label="Channels"
+          channels={publicChannels}
+          base={base}
+          pathname={pathname}
+          onCreateChannel={() => setCreateChannelOpen(true)}
+          onDelete={(id, name) => { if (confirm(`Delete #${name}?`)) deleteChannel.mutate({ id }); }}
+        />
+        {privateChannels.length > 0 && (
+          <ChannelGroup label="Private" channels={privateChannels} base={base} pathname={pathname} onDelete={(id, name) => { if (confirm(`Delete #${name}?`)) deleteChannel.mutate({ id }); }} />
+        )}
+        {dmChannels.length > 0 && (
+          <ChannelGroup label="Direct Messages" channels={dmChannels} base={base} pathname={pathname} />
+        )}
+        {deviceChannels.length > 0 && (
+          <ChannelGroup label="Devices" channels={deviceChannels} base={base} pathname={pathname} />
+        )}
+
+        <Separator className="my-2" />
+
+        {/* Knowledge */}
+        <Link
+          href={`${base}/knowledge`}
+          className={cn(
+            'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+            pathname.includes('/knowledge') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+          )}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+          </svg>
+          Knowledge
+        </Link>
+
+        {/* Members */}
+        <Link
+          href={`${base}/members`}
+          className={cn(
+            'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+            pathname.includes('/members') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+          )}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+          </svg>
+          Members
+        </Link>
+
+        <Separator className="my-2" />
+
+        {/* Agents in workspace */}
+        <SectionHeader label="Agents" onAdd={() => setSpawnAgentOpen(true)} addTitle="Deploy agent" />
+        {agents?.map((agent) => (
+          <ContextMenu
+            key={agent.id}
+            menu={
+              <>
+                <ContextMenuItem onClick={() => openDM.mutate({ workspaceId, agentId: agent.id })}>Message</ContextMenuItem>
+                <ContextMenuItem onClick={() => copyToClipboard(agent.id)}>Copy agent ID</ContextMenuItem>
+                <ContextMenuSeparator />
+                {(agent.status === 'sleeping' || agent.status === 'offline') && (
+                  <ContextMenuItem onClick={() => wakeAgent.mutate({ id: agent.id })}>Wake</ContextMenuItem>
+                )}
+                {agent.status === 'active' && (
+                  <ContextMenuItem onClick={() => sleepAgent.mutate({ id: agent.id })}>Sleep</ContextMenuItem>
+                )}
+              </>
+            }
+          >
+            <div className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-muted-foreground ml-1">
+              <div className={cn('h-2 w-2 rounded-full shrink-0', agentStatusDot[agent.status] ?? 'bg-gray-500')} />
+              <button
+                type="button"
+                onClick={() => openDM.mutate({ workspaceId, agentId: agent.id })}
+                className="truncate hover:text-foreground transition-colors text-left text-xs"
+              >
+                {agent.name}
+              </button>
+              <span className="text-[10px] opacity-50">{agentTypeLabel[agent.agentType] ?? agent.agentType}</span>
+            </div>
+          </ContextMenu>
+        ))}
+
+        {/* People */}
+        <div className="mt-1">
+          <SectionHeader label="People" />
+          {userMembers.map((member) => (
+            <div key={member.id} className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-muted-foreground ml-1">
+              <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
+              <button
+                type="button"
+                onClick={() => member.userId && openUserDM.mutate({ workspaceId, targetUserId: member.userId })}
+                className="truncate hover:text-foreground transition-colors text-left text-xs"
+              >
+                {member.userName ?? 'User'}
+              </button>
+              {member.role === 'owner' && <span className="ml-auto text-[10px] opacity-50">owner</span>}
+            </div>
+          ))}
+        </div>
+
+        <Separator className="my-2" />
+
+        {/* Settings */}
+        <Link
+          href={`${base}/settings`}
+          className={cn(
+            'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+            pathname.endsWith('/settings') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+          )}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          Settings
+        </Link>
+      </ScrollArea>
+
+      {/* Dialogs */}
+      {workspaceId && <CreateChannelDialog workspaceId={workspaceId} open={createChannelOpen} onOpenChange={setCreateChannelOpen} />}
+      {workspaceId && <SpawnAgentDialog workspaceId={workspaceId} open={spawnAgentOpen} onOpenChange={setSpawnAgentOpen} />}
+
+      <Separator />
+
+      {/* User */}
+      <div className="flex items-center gap-2 p-3">
+        <UserButton afterSignOutUrl="/sign-in" />
+        <span className="truncate text-sm">{user?.firstName ?? user?.username ?? 'User'}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Channel Group ─────────────────────────────────────────────────
+
+function ChannelGroup({
+  label,
+  channels,
+  base,
+  pathname,
+  onCreateChannel,
+  onDelete,
+}: {
+  label: string;
+  channels: Array<{ id: string; name: string; type: string }>;
+  base: string;
+  pathname: string;
+  onCreateChannel?: () => void;
+  onDelete?: (id: string, name: string) => void;
+}) {
+  return (
+    <div className="mt-2">
+      <SectionHeader label={label} onAdd={onCreateChannel} addTitle="Create channel" />
+      {channels.map((channel) => {
+        const href = `${base}/channels/${channel.id}`;
+        const isActive = pathname === href;
+        const isDM = channel.type === 'dm';
+
+        const menu = isDM ? (
+          <ContextMenuItem onClick={() => copyToClipboard(channel.id)}>Copy channel ID</ContextMenuItem>
+        ) : (
+          <>
+            <ContextMenuItem onClick={() => copyToClipboard(channel.id)}>Copy channel ID</ContextMenuItem>
+            {onDelete && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem className="text-red-400" onClick={() => onDelete(channel.id, channel.name)}>
+                  Delete channel
+                </ContextMenuItem>
+              </>
+            )}
+          </>
+        );
+
+        return (
+          <ContextMenu key={channel.id} menu={menu}>
+            <Link
+              href={href}
+              className={cn(
+                'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+              )}
+            >
+              <ChannelIcon type={channel.type} />
+              <span className="truncate">{channel.name}</span>
+            </Link>
+          </ContextMenu>
+        );
+      })}
+      {channels.length === 0 && <p className="px-2 py-1 text-xs text-muted-foreground">None</p>}
+    </div>
+  );
+}

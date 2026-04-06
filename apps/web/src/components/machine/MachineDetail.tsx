@@ -31,7 +31,7 @@ export function MachineDetail({ machine, agents }: Props) {
 
   const deregister = trpc.machines.deregister.useMutation({
     onSuccess: () => {
-      utils.machines.list.invalidate({ workspaceId: machine.workspaceId });
+      utils.machines.list.invalidate({ teamId: machine.teamId });
     },
   });
 

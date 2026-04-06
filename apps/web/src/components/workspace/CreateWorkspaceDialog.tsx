@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  teamId?: string;
 }
 
-export function CreateWorkspaceDialog({ open, onOpenChange }: Props) {
+export function CreateWorkspaceDialog({ open, onOpenChange, teamId }: Props) {
   const [name, setName] = useState('');
   const router = useRouter();
   const utils = trpc.useUtils();
@@ -38,7 +39,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange }: Props) {
         onSubmit={(e) => {
           e.preventDefault();
           if (name.trim()) {
-            createWorkspace.mutate({ name: name.trim() });
+            createWorkspace.mutate({ name: name.trim(), ...(teamId ? { teamId } : {}) });
           }
         }}
       >

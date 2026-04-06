@@ -69,19 +69,19 @@ export function AgentPanel({ agent, onClose }: Props) {
 
   const updateAgent = trpc.agents.update.useMutation({
     onSuccess: () => {
-      utils.agents.list.invalidate({ workspaceId: agent.workspaceId });
+      utils.agents.list.invalidate({ teamId: agent.teamId });
       setEditing(false);
     },
   });
   const wake = trpc.agents.wake.useMutation({
-    onSuccess: () => utils.agents.list.invalidate({ workspaceId: agent.workspaceId }),
+    onSuccess: () => utils.agents.list.invalidate({ teamId: agent.teamId }),
   });
   const sleep = trpc.agents.sleep.useMutation({
-    onSuccess: () => utils.agents.list.invalidate({ workspaceId: agent.workspaceId }),
+    onSuccess: () => utils.agents.list.invalidate({ teamId: agent.teamId }),
   });
   const deleteAgent = trpc.agents.delete.useMutation({
     onSuccess: () => {
-      utils.agents.list.invalidate({ workspaceId: agent.workspaceId });
+      utils.agents.list.invalidate({ teamId: agent.teamId });
       onClose();
     },
   });

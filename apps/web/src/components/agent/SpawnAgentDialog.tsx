@@ -25,6 +25,7 @@ import type { AgentPermissions, PermissionPreset, AccessLevel, ToolGroup } from 
 
 interface Props {
   workspaceId: string;
+  teamId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -132,7 +133,7 @@ function PermissionsEditor({
   );
 }
 
-export function SpawnAgentDialog({ workspaceId, open, onOpenChange }: Props) {
+export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Props) {
   const [mode, setMode] = useState<Mode>('hosted_bot');
   const [name, setName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
@@ -187,7 +188,8 @@ export function SpawnAgentDialog({ workspaceId, open, onOpenChange }: Props) {
 
     if (mode === 'hosted_bot') {
       createBot.mutate({
-        workspaceId,
+        ...(teamId ? { teamId } : {}),
+        ...(workspaceId ? { workspaceId } : {}),
         name: name.trim(),
         roleDescription: roleDescription.trim(),
         systemPrompt: systemPrompt.trim(),
@@ -201,7 +203,8 @@ export function SpawnAgentDialog({ workspaceId, open, onOpenChange }: Props) {
     } else {
       if (!machineId) return;
       spawnAgent.mutate({
-        workspaceId,
+        ...(teamId ? { teamId } : {}),
+        ...(workspaceId ? { workspaceId } : {}),
         machineId,
         name: name.trim(),
         agentType: 'cli_agent',

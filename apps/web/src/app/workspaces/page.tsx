@@ -11,10 +11,30 @@ import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDia
 export default function HomePage() {
   const [createOpen, setCreateOpen] = useState(false);
   const { data: workspaces, isLoading } = trpc.workspaces.list.useQuery();
+  const { data: teams } = trpc.teams.list.useQuery();
 
   return (
     <div className="flex h-full overflow-auto">
       <div className="w-full max-w-3xl mx-auto p-8 space-y-8">
+        {/* Team banner */}
+        {teams && teams.length > 0 && (
+          <Link
+            href={`/t/${teams[0].slug}`}
+            className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 hover:bg-primary/10 transition-colors"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold">
+              {teams[0].name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm">Go to {teams[0].name}</p>
+              <p className="text-xs text-muted-foreground">Team dashboard with agents, members, and metrics</p>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-foreground">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Link>
+        )}
+
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold">Home</h1>
