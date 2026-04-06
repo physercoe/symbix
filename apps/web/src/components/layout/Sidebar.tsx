@@ -535,12 +535,15 @@ export function Sidebar() {
   const paramWorkspaceId = params.workspaceId as string | undefined;
 
   // Persist last workspace so Toolkit tab can switch back to it
-  const [lastWorkspaceId, setLastWorkspaceId] = useState<string | undefined>(() => {
-    if (typeof window === 'undefined') return undefined;
-    return localStorage.getItem('symbix:lastWorkspaceId') ?? undefined;
-  });
+  const [lastWorkspaceId, setLastWorkspaceId] = useState<string | undefined>(undefined);
 
   const workspaceId = paramWorkspaceId ?? lastWorkspaceId;
+
+  // Read from localStorage on mount (client-only, avoids hydration mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem('symbix:lastWorkspaceId');
+    if (stored) setLastWorkspaceId(stored);
+  }, []);
 
   // Save to localStorage whenever we're on a workspace route
   useEffect(() => {
