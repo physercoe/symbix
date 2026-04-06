@@ -1,12 +1,18 @@
 'use client';
 
-import { AppShell } from '@/components/layout/AppShell';
-import { TeamSidebar } from '@/components/layout/TeamSidebar';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function ToolkitLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <AppShell defaultSidebar={<TeamSidebar />}>
-      {children}
-    </AppShell>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    const teamSlug = localStorage.getItem('symbix:lastTeamSlug');
+    if (teamSlug) {
+      router.replace(`/t/${teamSlug}/toolkit`);
+    }
+  }, [router]);
+
+  // Show children briefly while redirecting (or if no team slug stored)
+  return <>{children}</>;
 }
