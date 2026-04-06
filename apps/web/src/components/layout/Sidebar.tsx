@@ -188,8 +188,8 @@ function TeamSection({ workspaceId, onSpawnAgent }: { workspaceId: string; onSpa
       <SectionHeader label="Team" />
 
       {/* Agents sub-section */}
-      <button type="button" onClick={() => setAgentsOpen(!agentsOpen)}
-        className="flex w-full items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+      <div role="button" tabIndex={0} onClick={() => setAgentsOpen(!agentsOpen)} onKeyDown={(e) => { if (e.key === 'Enter') setAgentsOpen(!agentsOpen); }}
+        className="flex w-full items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           className={cn('transition-transform', agentsOpen ? 'rotate-90' : '')}>
           <polyline points="9 18 15 12 9 6" />
@@ -200,7 +200,7 @@ function TeamSection({ workspaceId, onSpawnAgent }: { workspaceId: string; onSpa
           className="ml-auto text-muted-foreground hover:text-foreground" title="Spawn agent">
           <PlusIcon size={12} />
         </button>
-      </button>
+      </div>
 
       {agentsOpen && agents?.map((agent) => (
         <ContextMenu
@@ -236,8 +236,8 @@ function TeamSection({ workspaceId, onSpawnAgent }: { workspaceId: string; onSpa
       ))}
 
       {/* People sub-section */}
-      <button type="button" onClick={() => setPeopleOpen(!peopleOpen)}
-        className="flex w-full items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1">
+      <div role="button" tabIndex={0} onClick={() => setPeopleOpen(!peopleOpen)} onKeyDown={(e) => { if (e.key === 'Enter') setPeopleOpen(!peopleOpen); }}
+        className="flex w-full items-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1 cursor-pointer">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           className={cn('transition-transform', peopleOpen ? 'rotate-90' : '')}>
           <polyline points="9 18 15 12 9 6" />
@@ -248,7 +248,7 @@ function TeamSection({ workspaceId, onSpawnAgent }: { workspaceId: string; onSpa
           className="ml-auto text-muted-foreground hover:text-foreground" title="Invite">
           <PlusIcon size={12} />
         </button>
-      </button>
+      </div>
 
       {showInvite && peopleOpen && (
         <div className="px-3 py-1 ml-2">
