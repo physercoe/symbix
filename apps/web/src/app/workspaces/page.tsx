@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,9 +10,17 @@ import { Separator } from '@/components/ui/separator';
 import { CreateWorkspaceDialog } from '@/components/workspace/CreateWorkspaceDialog';
 
 export default function HomePage() {
+  const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const { data: workspaces, isLoading } = trpc.workspaces.list.useQuery();
   const { data: teams } = trpc.teams.list.useQuery();
+
+  // Auto-redirect to team dashboard if user has teams
+  useEffect(() => {
+    if (teams && teams.length > 0) {
+      router.replace(`/t/${teams[0].slug}`);
+    }
+  }, [teams, router]);
 
   return (
     <div className="flex h-full overflow-auto">

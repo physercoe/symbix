@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useUser, UserButton } from '@clerk/nextjs';
@@ -84,6 +84,11 @@ export function TeamSidebar() {
     team ? { teamId: team.id } : undefined,
     { enabled: !!team },
   );
+
+  // Persist last team slug for resolve-team redirect
+  useEffect(() => {
+    if (teamSlug) localStorage.setItem('symbix:lastTeamSlug', teamSlug);
+  }, [teamSlug]);
 
   const base = `/t/${teamSlug}`;
 
