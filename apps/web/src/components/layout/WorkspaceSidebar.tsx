@@ -174,6 +174,20 @@ export function WorkspaceSidebar() {
           Members
         </Link>
 
+        {/* Metrics */}
+        <Link
+          href={`${base}/metrics`}
+          className={cn(
+            'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
+            pathname.includes('/metrics') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+          )}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
+          </svg>
+          Metrics
+        </Link>
+
         <Separator className="my-2" />
 
         {/* Agents in workspace */}

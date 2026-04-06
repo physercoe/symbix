@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
@@ -90,7 +91,7 @@ export default function TeamAgentsPage() {
               <div className={cn('h-3 w-3 rounded-full shrink-0', statusDot[agent.status] ?? 'bg-gray-500')} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium truncate">{agent.name}</p>
+                  <Link href={`/t/${teamSlug}/agents/${agent.id}`} className="text-sm font-medium truncate hover:underline">{agent.name}</Link>
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                     {typeLabel[agent.agentType] ?? agent.agentType}
                   </Badge>
