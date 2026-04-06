@@ -1,15 +1,30 @@
 /**
- * Executes built-in channel tools on behalf of an agent.
+ * Executes built-in tools on behalf of an agent.
  * Called from the agent-response worker when the LLM returns tool_call chunks.
+ *
+ * Two scopes:
+ *  - Channel tools: operate on the current channel (tasks, docs, links, files, pins)
+ *  - Workspace tools: read workspace-level resources (knowledge, specs, channels, members, messages)
  */
 
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, ilike, or } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { channelItems, pinnedMessages, messages } from '../db/schema/index.js';
+import {
+  channelItems,
+  pinnedMessages,
+  messages,
+  workspaceItems,
+  specs,
+  channels,
+  channelMembers,
+  agents,
+  users,
+} from '../db/schema/index.js';
 
-interface ToolContext {
+export interface ToolContext {
   channelId: string;
   agentId: string;
+  workspaceId: string;
 }
 
 /**
@@ -240,6 +255,238 @@ async function dispatch(
     case 'unpin_message': {
       await db.delete(pinnedMessages).where(eq(pinnedMessages.id, String(args.pinId)));
       return { success: true };
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // WORKSPACE TOOLS — read workspace-level resources
+    // ════════════════════════════════════════════════════════════
+
+    // ── Knowledge (Workspace Items) ────────────────────────────
+    case 'search_knowledge': {
+      const limit = Math.min(Number(args.limit) || 20, 50);
+      const conditions = [eq(workspaceItems.workspaceId, ctx.workspaceId)];
+
+      if (args.type && typeof args.type === 'string') {
+        conditions.push(eq(workspaceItems.type, args.type));
+      }
+      if (args.category && typeof args.category === 'string') {
+        conditions.push(eq(workspaceItems.category, args.category));
+      }
+      if (args.query && typeof args.query === 'string') {
+        const q = `%${args.query}%`;
+        conditions.push(
+          or(ilike(workspaceItems.title, q), ilike(workspaceItems.content, q))!,
+        );
+      }
+
+      const rows = await db
+        .select({
+          id: workspaceItems.id,
+          type: workspaceItems.type,
+          title: workspaceItems.title,
+          category: workspaceItems.category,
+          url: workspaceItems.url,
+          createdAt: workspaceItems.createdAt,
+        })
+        .from(workspaceItems)
+        .where(and(...conditions))
+        .orderBy(desc(workspaceItems.updatedAt))
+        .limit(limit);
+      return rows;
+    }
+
+    case 'get_knowledge_item': {
+      const [item] = await db
+        .select()
+        .from(workspaceItems)
+        .where(
+          and(
+            eq(workspaceItems.id, String(args.id)),
+            eq(workspaceItems.workspaceId, ctx.workspaceId),
+          ),
+        )
+        .limit(1);
+      if (!item) throw new Error(`Knowledge item ${args.id} not found`);
+      return item;
+    }
+
+    case 'create_knowledge_doc': {
+      const [item] = await db
+        .insert(workspaceItems)
+        .values({
+          workspaceId: ctx.workspaceId,
+          type: 'doc',
+          title: String(args.title),
+          content: args.content ? String(args.content) : undefined,
+          category: args.category ? String(args.category) : undefined,
+          createdBy: ctx.agentId,
+        })
+        .returning();
+      return item;
+    }
+
+    // ── Specs ──────────────────────────────────────────────────
+    case 'search_specs': {
+      const limit = Math.min(Number(args.limit) || 20, 50);
+      const conditions = [
+        or(eq(specs.visibility, 'public'), eq(specs.visibility, 'workspace'))!,
+      ];
+
+      if (args.specType && typeof args.specType === 'string') {
+        conditions.push(eq(specs.specType, args.specType));
+      }
+      if (args.query && typeof args.query === 'string') {
+        const q = `%${args.query}%`;
+        conditions.push(
+          or(ilike(specs.name, q), ilike(specs.description, q))!,
+        );
+      }
+
+      const rows = await db
+        .select({
+          id: specs.id,
+          specType: specs.specType,
+          name: specs.name,
+          version: specs.version,
+          description: specs.description,
+          visibility: specs.visibility,
+          category: specs.category,
+          usageCount: specs.usageCount,
+        })
+        .from(specs)
+        .where(and(...conditions))
+        .orderBy(desc(specs.updatedAt))
+        .limit(limit);
+      return rows;
+    }
+
+    case 'get_spec': {
+      const [spec] = await db
+        .select()
+        .from(specs)
+        .where(
+          and(
+            eq(specs.id, String(args.id)),
+            or(eq(specs.visibility, 'public'), eq(specs.visibility, 'workspace'))!,
+          ),
+        )
+        .limit(1);
+      if (!spec) throw new Error(`Spec ${args.id} not found or is private`);
+      return spec;
+    }
+
+    // ── Workspace Structure ────────────────────────────────────
+    case 'list_channels': {
+      const conditions = [eq(channels.workspaceId, ctx.workspaceId)];
+      if (args.type && typeof args.type === 'string') {
+        conditions.push(eq(channels.type, args.type));
+      }
+      const rows = await db
+        .select({
+          id: channels.id,
+          name: channels.name,
+          type: channels.type,
+          description: channels.description,
+        })
+        .from(channels)
+        .where(and(...conditions))
+        .orderBy(channels.name);
+      return rows;
+    }
+
+    case 'list_channel_members': {
+      const targetChannelId = (args.channelId as string) || ctx.channelId;
+      const rows = await db
+        .select({
+          id: channelMembers.id,
+          memberType: channelMembers.memberType,
+          userId: channelMembers.userId,
+          agentId: channelMembers.agentId,
+          joinedAt: channelMembers.joinedAt,
+        })
+        .from(channelMembers)
+        .where(eq(channelMembers.channelId, targetChannelId));
+
+      // Resolve names for a friendlier result
+      const resolved = await Promise.all(
+        rows.map(async (m) => {
+          if (m.memberType === 'user' && m.userId) {
+            const [user] = await db
+              .select({ name: users.name })
+              .from(users)
+              .where(eq(users.id, m.userId))
+              .limit(1);
+            return { id: m.id, type: 'user', name: user?.name ?? 'Unknown', userId: m.userId, joinedAt: m.joinedAt };
+          }
+          if (m.memberType === 'agent' && m.agentId) {
+            const [agent] = await db
+              .select({ name: agents.name, status: agents.status, roleDescription: agents.roleDescription })
+              .from(agents)
+              .where(eq(agents.id, m.agentId))
+              .limit(1);
+            return {
+              id: m.id,
+              type: 'agent',
+              name: agent?.name ?? 'Unknown',
+              agentId: m.agentId,
+              status: agent?.status,
+              role: agent?.roleDescription,
+              joinedAt: m.joinedAt,
+            };
+          }
+          return m;
+        }),
+      );
+      return resolved;
+    }
+
+    case 'list_workspace_agents': {
+      const conditions = [eq(agents.workspaceId, ctx.workspaceId)];
+      if (args.status && typeof args.status === 'string') {
+        conditions.push(eq(agents.status, args.status));
+      }
+      const rows = await db
+        .select({
+          id: agents.id,
+          name: agents.name,
+          agentType: agents.agentType,
+          status: agents.status,
+          roleDescription: agents.roleDescription,
+          capabilities: agents.capabilities,
+          llmProvider: agents.llmProvider,
+          llmModel: agents.llmModel,
+        })
+        .from(agents)
+        .where(and(...conditions))
+        .orderBy(agents.name);
+      return rows;
+    }
+
+    // ── Message Search ─────────────────────────────────────────
+    case 'search_messages': {
+      const limit = Math.min(Number(args.limit) || 20, 50);
+      const targetChannelId = (args.channelId as string) || ctx.channelId;
+      const q = `%${String(args.query)}%`;
+
+      const rows = await db
+        .select({
+          id: messages.id,
+          channelId: messages.channelId,
+          senderType: messages.senderType,
+          senderId: messages.senderId,
+          content: messages.content,
+          createdAt: messages.createdAt,
+        })
+        .from(messages)
+        .where(
+          and(
+            eq(messages.channelId, targetChannelId),
+            ilike(messages.content, q),
+          ),
+        )
+        .orderBy(desc(messages.createdAt))
+        .limit(limit);
+      return rows;
     }
 
     default:

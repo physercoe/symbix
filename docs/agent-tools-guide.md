@@ -348,13 +348,184 @@ You are a meeting notes bot. When users say "start meeting" or discuss agenda it
 
 ---
 
+---
+
+## Workspace Tools
+
+Workspace tools give agents visibility beyond their current channel — they can search workspace knowledge, browse specs, discover channels and members, find other agents, and search message history.
+
+### Enabling Workspace Tools
+
+Workspace tools are **automatically enabled** when channel tools are enabled. You can also enable them independently:
+
+```json
+{
+  "name": "Research Assistant",
+  "capabilities": ["workspace_tools"],
+  "systemPrompt": "You are a research assistant with access to the workspace knowledge base..."
+}
+```
+
+Or via config:
+
+```json
+{
+  "config": { "workspaceTools": true }
+}
+```
+
+> **Note:** Enabling `channel_tools` automatically enables `workspace_tools` too. You only need the separate `workspace_tools` capability if you want workspace-level read access *without* channel write tools.
+
+---
+
+### Knowledge Base
+
+Search and read workspace-level documents, files, links, and templates.
+
+#### `search_knowledge`
+
+Search the workspace knowledge base.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | No | Search query — matched against titles and content. Omit to list recent. |
+| `type` | `"doc"` \| `"file"` \| `"link"` \| `"template"` | No | Filter by item type. |
+| `category` | string | No | Filter by category tag. |
+| `limit` | number | No | Max results (default 20, max 50). |
+
+**Returns:** Array of `{ id, type, title, category, url, createdAt }`
+
+**Example prompt:** "What documentation do we have about the API?"
+
+---
+
+#### `get_knowledge_item`
+
+Get full content of a knowledge item by id.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Item ID (use `search_knowledge` to find it) |
+
+**Returns:** Full item object including `content`.
+
+---
+
+#### `create_knowledge_doc`
+
+Create a new document in the workspace knowledge base.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `title` | string | Yes | Document title |
+| `content` | string | No | Markdown content |
+| `category` | string | No | Category tag (e.g. "onboarding", "api-docs") |
+
+**Returns:** The created document object.
+
+**Example prompt:** "Write up a summary of our API endpoints and save it to the knowledge base"
+
+---
+
+### Specs
+
+Search and read agent and workspace specs (blueprints/templates). Read-only — agents cannot create or modify specs.
+
+#### `search_specs`
+
+Search specs visible to the workspace (public + workspace-visible).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | No | Search query — matched against name and description. |
+| `specType` | `"agent"` \| `"workspace"` | No | Filter by spec type. |
+| `limit` | number | No | Max results (default 20, max 50). |
+
+**Returns:** Array of `{ id, specType, name, version, description, visibility, category, usageCount }`
+
+---
+
+#### `get_spec`
+
+Get full structured content of a spec.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string (UUID) | Yes | Spec ID |
+
+**Returns:** Full spec object including `content` (structured JSON with identity, capabilities, behavior sections for agent specs; objectives, rules, roles for workspace specs).
+
+---
+
+### Workspace Structure
+
+Discover channels, members, and other agents.
+
+#### `list_channels`
+
+List all channels in the workspace.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | `"public"` \| `"private"` \| `"dm"` \| `"device"` | No | Filter by channel type. |
+
+**Returns:** Array of `{ id, name, type, description }`
+
+---
+
+#### `list_channel_members`
+
+List members of a channel with resolved names.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `channelId` | string (UUID) | No | Channel to inspect. Defaults to the current channel. |
+
+**Returns:** Array of members, each with `{ id, type, name, joinedAt }`. Agent members also include `status` and `role`.
+
+**Example prompt:** "Who is in the #engineering channel?"
+
+---
+
+#### `list_workspace_agents`
+
+List all agents in the workspace.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | `"active"` \| `"sleeping"` \| `"disabled"` \| `"offline"` \| `"error"` | No | Filter by status. |
+
+**Returns:** Array of `{ id, name, agentType, status, roleDescription, capabilities, llmProvider, llmModel }`
+
+**Example prompt:** "What other agents are in this workspace?"
+
+---
+
+### Message Search
+
+#### `search_messages`
+
+Search messages beyond the 50-message context window.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | Yes | Search query — matched against message content. |
+| `channelId` | string (UUID) | No | Channel to search. Defaults to current channel. |
+| `limit` | number | No | Max results (default 20, max 50). |
+
+**Returns:** Array of `{ id, channelId, senderType, senderId, content, createdAt }`
+
+**Example prompt:** "Search for messages about the database migration"
+
+---
+
 ## Limitations
 
 - **No binary file upload:** `save_file` stores metadata/URLs only. Agents cannot upload files to the server.
-- **No message search:** Agents see the last 50 messages as context but cannot search older messages.
-- **No cross-channel access:** Tools only operate on the channel where the conversation is happening.
 - **Max 10 tool rounds:** If the LLM keeps calling tools after 10 rounds, the loop stops and returns whatever text has been accumulated.
 - **Channel membership required:** The agent must be a member of the channel to use tools in it.
+- **Specs are read-only:** Agents can search and read specs but cannot create or modify them.
+- **Knowledge write is doc-only:** Agents can create knowledge docs but cannot upload files or modify existing items.
 
 ---
 

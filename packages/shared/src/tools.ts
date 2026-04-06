@@ -244,3 +244,185 @@ export const CHANNEL_TOOLS: ToolDefinition[] = [
 
 /** Lookup map for quick access by tool name */
 export const CHANNEL_TOOLS_MAP = new Map(CHANNEL_TOOLS.map((t) => [t.name, t]));
+
+/**
+ * Workspace-level tools that give agents visibility beyond their current channel.
+ * These tools are read-heavy — agents can query workspace knowledge, specs,
+ * channels, members, and search messages, but write access is limited to
+ * contributing knowledge docs.
+ */
+export const WORKSPACE_TOOLS: ToolDefinition[] = [
+  // ── Knowledge (Workspace Items) ─────────────────────────────
+  {
+    name: 'search_knowledge',
+    description:
+      'Search the workspace knowledge base (docs, files, links, templates). Returns matching items with title, type, content preview, and url. Use this to find project documentation, reference materials, and shared resources.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query — matched against titles and content. Omit to list recent items.',
+        },
+        type: {
+          type: 'string',
+          enum: ['doc', 'file', 'link', 'template'],
+          description: 'Filter by item type. Omit to search all types.',
+        },
+        category: {
+          type: 'string',
+          description: 'Filter by category tag.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Max results to return. Defaults to 20.',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_knowledge_item',
+    description:
+      'Get the full content of a workspace knowledge item by id. Use search_knowledge first to find the id.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Item UUID (required).' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'create_knowledge_doc',
+    description:
+      'Create a new document in the workspace knowledge base. Use this to contribute documentation, meeting notes, or research findings that should be shared across channels.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Document title (required).' },
+        content: { type: 'string', description: 'Markdown content.' },
+        category: { type: 'string', description: 'Category tag (e.g. "onboarding", "api-docs").' },
+      },
+      required: ['title'],
+    },
+  },
+
+  // ── Specs ───────────────────────────────────────────────────
+  {
+    name: 'search_specs',
+    description:
+      'Search agent and workspace specs (blueprints/templates). Returns matching specs with name, type, description, and version. Specs define reusable agent configurations and workspace setups.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query — matched against name and description. Omit to list all.',
+        },
+        specType: {
+          type: 'string',
+          enum: ['agent', 'workspace'],
+          description: 'Filter by spec type.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Max results. Defaults to 20.',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_spec',
+    description:
+      'Get the full structured content of a spec by id. Returns the complete JSON spec with all sections (identity, capabilities, behavior, etc.).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Spec UUID (required).' },
+      },
+      required: ['id'],
+    },
+  },
+
+  // ── Workspace Structure ─────────────────────────────────────
+  {
+    name: 'list_channels',
+    description:
+      'List all channels in the workspace. Returns channel name, type (public/private/dm/device), and description. Useful for understanding workspace structure.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['public', 'private', 'dm', 'device'],
+          description: 'Filter by channel type. Omit to list all.',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'list_channel_members',
+    description:
+      'List members (humans and agents) in a specific channel. Returns member name, type (user/agent), and join date.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channelId: {
+          type: 'string',
+          description: 'Channel UUID. Omit to list members of the current channel.',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'list_workspace_agents',
+    description:
+      'List all agents in the workspace with their status, role, and capabilities. Useful for knowing what other agents exist and what they do.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['active', 'sleeping', 'disabled', 'offline', 'error'],
+          description: 'Filter by agent status. Omit to list all.',
+        },
+      },
+      required: [],
+    },
+  },
+
+  // ── Message Search ──────────────────────────────────────────
+  {
+    name: 'search_messages',
+    description:
+      'Search messages across the current channel (beyond the 50-message context window). Returns matching messages with sender info and timestamps. Use this to find older conversations, decisions, or information.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query — matched against message content (required).',
+        },
+        channelId: {
+          type: 'string',
+          description: 'Channel to search. Defaults to the current channel.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Max results. Defaults to 20.',
+        },
+      },
+      required: ['query'],
+    },
+  },
+];
+
+/** Lookup map for workspace tools */
+export const WORKSPACE_TOOLS_MAP = new Map(WORKSPACE_TOOLS.map((t) => [t.name, t]));
+
+/** All agent tools combined */
+export const ALL_AGENT_TOOLS = [...CHANNEL_TOOLS, ...WORKSPACE_TOOLS];

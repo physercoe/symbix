@@ -9,7 +9,7 @@ import type { ChatMessage, ChatChunk } from '@symbix/llm';
 import type { Agent } from '../db/schema/agents.js';
 import { agentResponseQueue } from '../services/bull.js';
 import { executeTool } from '../services/tool-executor.js';
-import { CHANNEL_TOOLS } from '@symbix/shared';
+import { CHANNEL_TOOLS, WORKSPACE_TOOLS } from '@symbix/shared';
 
 const MAX_TOOL_ROUNDS = 10;
 
@@ -124,12 +124,18 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
     ? `\n\nYour persistent memory:\n${memory.map((m) => `- ${m.key}: ${m.content}`).join('\n')}`
     : '';
 
-  const toolsEnabled = (agent.capabilities ?? []).includes('channel_tools')
-    || (agent.config as Record<string, unknown>)?.channelTools === true;
+  const agentConfig = (agent.config as Record<string, unknown>) ?? {};
+  const caps = agent.capabilities ?? [];
+  const channelToolsEnabled = caps.includes('channel_tools') || agentConfig.channelTools === true;
+  const workspaceToolsEnabled = caps.includes('workspace_tools') || agentConfig.workspaceTools === true || channelToolsEnabled;
 
-  const toolInstructions = toolsEnabled
-    ? '\n\nYou have access to channel tools for managing tasks, docs, links, files, and pinned messages. Use them when the user asks you to create, update, list, or delete these resources. Always confirm what you did after using a tool.'
-    : '';
+  let toolInstructions = '';
+  if (channelToolsEnabled) {
+    toolInstructions += '\n\nYou have access to channel tools for managing tasks, docs, links, files, and pinned messages. Use them when the user asks you to create, update, list, or delete these resources. Always confirm what you did after using a tool.';
+  }
+  if (workspaceToolsEnabled) {
+    toolInstructions += '\n\nYou have access to workspace tools that let you search the workspace knowledge base (docs, files, links), browse specs (agent/workspace blueprints), list channels and their members, discover other agents, and search message history beyond your context window. Use these tools proactively when you need more context to answer questions.';
+  }
 
   const chatMessages: ChatMessage[] = [
     {
@@ -144,13 +150,17 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
     })),
   ];
 
-  console.log(`[agent ${agent.name}] Context: ${chatMessages.length} msgs → ${agent.llmProvider}/${agent.llmModel}, tools=${toolsEnabled}`);
+  console.log(`[agent ${agent.name}] Context: ${chatMessages.length} msgs → ${agent.llmProvider}/${agent.llmModel}, channelTools=${channelToolsEnabled}, workspaceTools=${workspaceToolsEnabled}`);
 
   const llm = createLLMForAgent(agent);
   let fullResponse = '';
 
   try {
-    const tools = toolsEnabled ? CHANNEL_TOOLS : undefined;
+    const toolList = [
+      ...(channelToolsEnabled ? CHANNEL_TOOLS : []),
+      ...(workspaceToolsEnabled ? WORKSPACE_TOOLS : []),
+    ];
+    const tools = toolList.length > 0 ? toolList : undefined;
 
     // Tool-calling loop: LLM may call tools, we execute them, then continue
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -193,6 +203,7 @@ export async function processAgentResponse(job: Job<AgentResponseJobData>) {
         const { result, isError } = await executeTool(tc.name, parsedArgs, {
           channelId,
           agentId,
+          workspaceId: agent.workspaceId,
         });
 
         console.log(`[agent ${agent.name}] Tool result (${isError ? 'ERROR' : 'OK'}): ${result.slice(0, 200)}`);
