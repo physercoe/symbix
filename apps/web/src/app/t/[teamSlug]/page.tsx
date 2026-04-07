@@ -36,10 +36,10 @@ export default function TeamDashboard() {
 
   return (
     <div className="flex h-full overflow-auto">
-      <div className="w-full max-w-4xl mx-auto p-8 space-y-8">
+      <div className="w-full max-w-4xl mx-auto px-6 py-8 sm:px-8 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">{team?.name ?? t('nav.team')}</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h1 className="text-2xl font-bold tracking-tight">{team?.name ?? t('nav.team')}</h1>
+          <p className="text-muted-foreground text-sm mt-1.5">
             {team?.description ?? t('dashboard.teamDashboard')}
           </p>
         </div>
@@ -80,7 +80,7 @@ export default function TeamDashboard() {
                 <Link
                   key={ws.id}
                   href={`${base}/workspaces/${ws.id}`}
-                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
+                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/30 hover:border-accent-foreground/10 transition-all duration-150"
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold">
                     {ws.name.charAt(0).toUpperCase()}
@@ -119,10 +119,10 @@ export default function TeamDashboard() {
 
 function StatCard({ label, value, sub, href }: { label: string; value: number; sub?: string; href: string }) {
   return (
-    <Link href={href} className="rounded-lg border p-4 hover:bg-accent/50 transition-colors">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+    <Link href={href} className="group rounded-lg border p-4 hover:bg-accent/30 hover:border-accent-foreground/10 transition-all duration-150">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className="text-2xl font-bold mt-1.5 tracking-tight">{value}</p>
+      {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
     </Link>
   );
 }

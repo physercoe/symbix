@@ -25,7 +25,7 @@ function ChevronDown() {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="px-2.5 pt-3 pb-1 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+    <p className="px-2.5 pt-4 pb-1.5 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-[0.08em]">
       {children}
     </p>
   );
@@ -160,9 +160,9 @@ export function TeamSidebar() {
   };
 
   return (
-    <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-r">
+    <div className="flex h-full w-[260px] flex-col bg-sidebar text-sidebar-foreground border-r">
       {/* Team Selector — click name goes to dashboard */}
-      <div className="flex h-12 items-center border-b px-3">
+      <div className="flex h-13 items-center border-b px-3">
         <DropdownMenu
           trigger={
             <div className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-accent/50 transition-colors min-w-0 flex-1">

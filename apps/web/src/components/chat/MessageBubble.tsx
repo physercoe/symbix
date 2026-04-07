@@ -173,12 +173,12 @@ export function MessageBubble({ message, showHeader, senderName, onReply }: Prop
     <ContextMenu menu={contextMenuItems}>
       <div
         className={cn(
-          'group relative flex gap-3 px-1 py-0.5 hover:bg-accent/30 rounded',
+          'group relative flex gap-3 px-2 py-1 hover:bg-accent/20 rounded-md transition-colors duration-100',
           !showHeader && 'pl-12',
         )}
       >
         {/* Hover action bar */}
-        <div className="absolute -top-3 right-2 hidden group-hover:flex items-center gap-0.5 rounded-md border bg-popover px-0.5 py-0.5 shadow-sm z-10">
+        <div className="absolute -top-3 right-2 hidden group-hover:flex items-center gap-0.5 rounded-md border bg-popover px-0.5 py-0.5 shadow-md z-10">
           <button type="button" onClick={handleCopy}
             className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             title={copied ? 'Copied!' : 'Copy'}>

@@ -3,6 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -57,27 +58,27 @@
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 222 14% 7%;
+    --foreground: 210 20% 95%;
+    --card: 222 14% 7%;
+    --card-foreground: 210 20% 95%;
+    --popover: 222 16% 9%;
+    --popover-foreground: 210 20% 95%;
+    --primary: 210 100% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 12% 14%;
+    --secondary-foreground: 210 20% 95%;
+    --muted: 222 12% 14%;
+    --muted-foreground: 215 14% 55%;
+    --accent: 222 12% 14%;
+    --accent-foreground: 210 20% 95%;
+    --destructive: 0 62.8% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --sidebar: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
+    --border: 222 12% 16%;
+    --input: 222 12% 16%;
+    --ring: 210 100% 52%;
+    --sidebar: 222 16% 6%;
+    --sidebar-foreground: 215 14% 75%;
   }
 }
 
@@ -87,5 +88,44 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar for dark theme */
+  .dark ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .dark ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(222 12% 20%);
+    border-radius: 3px;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(222 12% 28%);
+  }
+
+  /* Firefox */
+  .dark * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(222 12% 20%) transparent;
+  }
+
+  /* Selection color */
+  ::selection {
+    background: hsl(210 100% 52% / 0.25);
+  }
+}
+
+/* Smooth transitions for interactive elements */
+@layer utilities {
+  .transition-default {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
   }
 }

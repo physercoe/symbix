@@ -122,17 +122,17 @@ export function WorkspaceSidebar() {
   };
 
   return (
-    <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-r">
+    <div className="flex h-full w-[260px] flex-col bg-sidebar text-sidebar-foreground border-r">
       {/* Back to team + workspace name */}
-      <div className="shrink-0 border-b px-3 py-2">
+      <div className="shrink-0 border-b px-3 py-2.5">
         <Link
           href={`/t/${teamSlug}`}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-1"
+          className="flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors mb-1.5"
         >
           <BackIcon />
           <span>{t('nav.backToTeam')}</span>
         </Link>
-        <p className="text-sm font-semibold truncate">{workspace?.name ?? t('workspace.workspace')}</p>
+        <p className="text-[15px] font-semibold tracking-tight truncate">{workspace?.name ?? t('workspace.workspace')}</p>
       </div>
 
       <ScrollArea className="flex-1 px-2 py-2">

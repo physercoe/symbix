@@ -49,8 +49,11 @@ export function MessageList({ messages, isLoading, senderNames, streaming, onRep
 
   if (messages.length === 0 && (!streaming || streaming.length === 0)) {
     return (
-      <div className="flex flex-1 items-center justify-center text-muted-foreground">
-        <p>No messages yet. Start the conversation!</p>
+      <div className="flex flex-1 flex-col items-center justify-center text-muted-foreground gap-2 px-4">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-30">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        <p className="text-sm">No messages yet. Start the conversation!</p>
       </div>
     );
   }

@@ -19,9 +19,9 @@ export default function WorkspaceMetricsPage() {
 
   return (
     <div className="flex h-full overflow-auto">
-      <div className="w-full max-w-4xl mx-auto p-8 space-y-8">
+      <div className="w-full max-w-4xl mx-auto px-6 py-8 sm:px-8 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">{t('workspace.metrics')}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('workspace.metrics')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {t('workspace.metricsDesc', { name: workspace?.name ?? t('workspace.workspace') })}
           </p>

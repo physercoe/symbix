@@ -24,7 +24,7 @@ class SidebarErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex h-full w-64 flex-col items-center justify-center bg-sidebar text-sidebar-foreground border-r p-4">
+        <div className="flex h-full w-[260px] flex-col items-center justify-center bg-sidebar text-sidebar-foreground border-r p-4">
           <p className="text-xs text-red-400 text-center">Sidebar error: {this.state.error}</p>
           <button
             className="mt-2 text-xs text-blue-400 hover:underline"
@@ -155,16 +155,26 @@ function ShellInner({ defaultSidebar, children }: { defaultSidebar: ReactNode; c
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex h-14 items-center border-b px-4 md:hidden">
+        <div className="flex h-12 items-center border-b px-3 md:hidden">
           <Button
             variant="ghost"
             size="icon"
+            className="h-8 w-8"
             onClick={() => setSidebarOpen(true)}
             aria-label="Open sidebar"
           >
             <HamburgerIcon />
           </Button>
-          <span className="ml-2 font-semibold">Symbix</span>
+          <div className="ml-2 flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-blue-500/10 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-blue-400">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                <path d="M2 17l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span className="text-sm font-semibold tracking-tight">Symbix</span>
+          </div>
         </div>
 
         <main className="flex-1 overflow-hidden">

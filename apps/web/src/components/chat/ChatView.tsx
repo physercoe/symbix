@@ -129,13 +129,13 @@ export function ChatView({ workspaceId, channelId }: Props) {
     <div className="flex h-full flex-col">
       {/* ── Header row ── */}
       <div className="shrink-0 border-b">
-        <div className="flex h-12 items-center justify-between px-4">
+        <div className="flex h-13 items-center justify-between px-4">
           {/* Channel name */}
           <div className="flex items-center min-w-0">
-            <span className="text-muted-foreground mr-2">{isDM ? '@' : '#'}</span>
-            <h2 className="font-semibold text-sm">{channel?.name ?? t('common.loading')}</h2>
+            <span className="text-muted-foreground/60 mr-1.5 text-lg">{isDM ? '@' : '#'}</span>
+            <h2 className="font-semibold text-[15px] tracking-tight">{channel?.name ?? t('common.loading')}</h2>
             {channel?.description && (
-              <span className="ml-3 text-xs text-muted-foreground truncate hidden sm:inline">{channel.description}</span>
+              <span className="ml-3 text-xs text-muted-foreground/70 truncate hidden sm:inline">{channel.description}</span>
             )}
           </div>
 
@@ -203,16 +203,16 @@ export function ChatView({ workspaceId, channelId }: Props) {
 
         {/* ── Tab bar (channels only, not DMs) ── */}
         {!isDM && (
-          <div className="flex items-center gap-0.5 px-4 pb-1 overflow-x-auto">
+          <div className="flex items-center gap-0.5 px-4 pb-1.5 overflow-x-auto">
             {TAB_KEYS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'px-3 py-1 text-xs rounded-md transition-colors whitespace-nowrap',
+                  'px-3 py-1 text-xs rounded-md transition-all duration-150 whitespace-nowrap',
                   activeTab === tab.id
-                    ? 'bg-accent text-accent-foreground font-medium'
+                    ? 'bg-accent text-accent-foreground font-medium shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
                 )}
               >
