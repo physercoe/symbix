@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
@@ -16,6 +17,7 @@ const statusDot: Record<string, string> = {
 
 export default function TeamDashboard() {
   const { teamSlug } = useParams() as { teamSlug: string };
+  const { t } = useTranslation();
   const { data: team } = trpc.teams.getBySlug.useQuery({ slug: teamSlug });
   const { data: overview, isLoading } = trpc.metrics.teamOverview.useQuery(
     { teamId: team?.id ?? '' },
@@ -36,9 +38,9 @@ export default function TeamDashboard() {
     <div className="flex h-full overflow-auto">
       <div className="w-full max-w-4xl mx-auto p-8 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">{team?.name ?? 'Team'}</h1>
+          <h1 className="text-2xl font-bold">{team?.name ?? t('nav.team')}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {team?.description ?? 'Team dashboard'}
+            {team?.description ?? t('dashboard.teamDashboard')}
           </p>
         </div>
 
@@ -48,10 +50,10 @@ export default function TeamDashboard() {
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)
           ) : (
             <>
-              <StatCard label="Members" value={overview?.members ?? 0} href={`${base}/members`} />
-              <StatCard label="Workspaces" value={overview?.workspaces ?? 0} href={`${base}/workspaces`} />
-              <StatCard label="Agents" value={overview?.agents.total ?? 0} sub={`${overview?.agents.active ?? 0} active`} href={`${base}/agents`} />
-              <StatCard label="Machines" value={overview?.machines.total ?? 0} sub={`${overview?.machines.online ?? 0} online`} href={`${base}/machines`} />
+              <StatCard label={t('nav.members')} value={overview?.members ?? 0} href={`${base}/members`} />
+              <StatCard label={t('nav.workspaces')} value={overview?.workspaces ?? 0} href={`${base}/workspaces`} />
+              <StatCard label={t('nav.agents')} value={overview?.agents.total ?? 0} sub={`${overview?.agents.active ?? 0} ${t('dashboard.active')}`} href={`${base}/agents`} />
+              <StatCard label={t('nav.machines')} value={overview?.machines.total ?? 0} sub={`${overview?.machines.online ?? 0} ${t('dashboard.online')}`} href={`${base}/machines`} />
             </>
           )}
         </div>
@@ -59,7 +61,7 @@ export default function TeamDashboard() {
         {/* Messages (7d) */}
         {overview && (
           <div className="rounded-lg border p-4">
-            <p className="text-sm text-muted-foreground">Messages (last 7 days)</p>
+            <p className="text-sm text-muted-foreground">{t('dashboard.messages7d')}</p>
             <p className="text-3xl font-bold mt-1">{overview.messages7d.toLocaleString()}</p>
           </div>
         )}
@@ -68,9 +70,9 @@ export default function TeamDashboard() {
         {workspaces && workspaces.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Workspaces</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t('nav.workspaces')}</h2>
               <Link href={`${base}/workspaces`} className="text-xs text-muted-foreground hover:text-foreground">
-                View all
+                {t('common.viewAll')}
               </Link>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -85,7 +87,7 @@ export default function TeamDashboard() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{ws.name}</p>
-                    <p className="text-xs text-muted-foreground">Created {new Date(ws.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground">{t('dashboard.created')} {new Date(ws.createdAt).toLocaleDateString()}</p>
                   </div>
                 </Link>
               ))}
@@ -96,7 +98,7 @@ export default function TeamDashboard() {
         {/* Recent Activity */}
         {recentActivity && recentActivity.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Recent Activity</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t('dashboard.recentActivity')}</h2>
             <div className="space-y-2">
               {recentActivity.map((event) => (
                 <div key={event.id} className="flex items-center gap-3 rounded-lg border px-3 py-2 text-sm">

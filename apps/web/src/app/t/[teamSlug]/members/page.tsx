@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ const roleBadgeColor: Record<string, string> = {
 
 export default function TeamMembersPage() {
   const { teamSlug } = useParams() as { teamSlug: string };
+  const { t } = useTranslation();
   const { data: team } = trpc.teams.getBySlug.useQuery({ slug: teamSlug });
   const { data: members, isLoading } = trpc.teams.listMembers.useQuery(
     { teamId: team?.id ?? '' },
@@ -49,11 +51,11 @@ export default function TeamMembersPage() {
       <div className="w-full max-w-3xl mx-auto p-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Members</h1>
-            <p className="text-sm text-muted-foreground mt-1">{members?.length ?? 0} team members</p>
+            <h1 className="text-2xl font-bold">{t('members.title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('members.teamMembers', { count: members?.length ?? 0 })}</p>
           </div>
           <Button size="sm" onClick={() => setShowInvite(!showInvite)}>
-            + Invite Member
+            {t('members.inviteMember')}
           </Button>
         </div>
 
@@ -68,23 +70,23 @@ export default function TeamMembersPage() {
             }}
           >
             <div className="flex-1">
-              <label className="text-xs text-muted-foreground">Email</label>
+              <label className="text-xs text-muted-foreground">{t('members.email')}</label>
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@example.com" />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Role</label>
+              <label className="text-xs text-muted-foreground">{t('members.role')}</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="viewer">Viewer</option>
+                <option value="member">{t('members.member')}</option>
+                <option value="admin">{t('members.admin')}</option>
+                <option value="viewer">{t('members.viewer')}</option>
               </select>
             </div>
             <Button type="submit" disabled={addMember.isPending}>
-              {addMember.isPending ? 'Adding...' : 'Add'}
+              {addMember.isPending ? t('common.adding') : t('common.add')}
             </Button>
           </form>
         )}
@@ -101,7 +103,7 @@ export default function TeamMembersPage() {
                 {(member.userName ?? 'U').charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{member.userName ?? 'Unknown'}</p>
+                <p className="text-sm font-medium truncate">{member.userName ?? t('common.unknown')}</p>
                 <p className="text-xs text-muted-foreground truncate">{member.userEmail}</p>
               </div>
               <Badge className={roleBadgeColor[member.role] ?? ''}>
@@ -114,21 +116,21 @@ export default function TeamMembersPage() {
                     onChange={(e) => updateRole.mutate({ teamId: team.id, userId: member.userId, role: e.target.value as 'admin' | 'member' | 'viewer' })}
                     className="h-7 rounded border border-input bg-background px-2 text-xs"
                   >
-                    <option value="admin">Admin</option>
-                    <option value="member">Member</option>
-                    <option value="viewer">Viewer</option>
+                    <option value="admin">{t('members.admin')}</option>
+                    <option value="member">{t('members.member')}</option>
+                    <option value="viewer">{t('members.viewer')}</option>
                   </select>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-red-400 hover:text-red-300 h-7 px-2 text-xs"
                     onClick={() => {
-                      if (confirm(`Remove ${member.userName ?? 'this member'}?`)) {
+                      if (confirm(t('members.removeConfirm', { name: member.userName ?? t('common.unknown') }))) {
                         removeMember.mutate({ teamId: team.id, userId: member.userId });
                       }
                     }}
                   >
-                    Remove
+                    {t('common.remove')}
                   </Button>
                 </div>
               )}

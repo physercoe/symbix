@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +16,7 @@ const statusDot: Record<string, string> = {
 
 export default function TeamMachinesPage() {
   const { teamSlug } = useParams() as { teamSlug: string };
+  const { t } = useTranslation();
   const { data: team } = trpc.teams.getBySlug.useQuery({ slug: teamSlug });
   const { data: machines, isLoading } = trpc.machines.list.useQuery(
     { teamId: team?.id ?? '' },
@@ -43,11 +45,11 @@ export default function TeamMachinesPage() {
       <div className="w-full max-w-3xl mx-auto p-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Machines</h1>
-            <p className="text-sm text-muted-foreground mt-1">{machines?.length ?? 0} registered machines</p>
+            <h1 className="text-2xl font-bold">{t('machines.title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('machines.machinesInTeam', { count: machines?.length ?? 0 })}</p>
           </div>
           <Button size="sm" onClick={() => setShowRegister(!showRegister)}>
-            + Register Machine
+{t('machines.addMachine')}
           </Button>
         </div>
 
@@ -62,7 +64,7 @@ export default function TeamMachinesPage() {
             }}
           >
             <div className="flex-1">
-              <label className="text-xs text-muted-foreground">Name</label>
+              <label className="text-xs text-muted-foreground">{t('spawnAgent.agentName')}</label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -71,7 +73,7 @@ export default function TeamMachinesPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Type</label>
+              <label className="text-xs text-muted-foreground">{t('channel.type')}</label>
               <select
                 value={machineType}
                 onChange={(e) => setMachineType(e.target.value)}
@@ -85,7 +87,7 @@ export default function TeamMachinesPage() {
               </select>
             </div>
             <Button type="submit" disabled={registerMachine.isPending}>
-              {registerMachine.isPending ? 'Registering...' : 'Register'}
+              {registerMachine.isPending ? t('common.creating') : t('common.create')}
             </Button>
           </form>
         )}
@@ -108,17 +110,17 @@ export default function TeamMachinesPage() {
                 size="sm"
                 className="h-7 px-2 text-xs text-red-400"
                 onClick={() => {
-                  if (confirm(`Remove machine "${machine.name}"?`)) deregister.mutate({ id: machine.id });
+                  if (confirm(t('members.removeConfirm', { name: machine.name }))) deregister.mutate({ id: machine.id });
                 }}
               >
-                Remove
+                {t('common.remove')}
               </Button>
             </div>
           ))}
           {machines && machines.length === 0 && (
             <div className="rounded-lg border border-dashed p-8 text-center">
-              <p className="text-sm text-muted-foreground mb-3">No machines registered</p>
-              <Button size="sm" onClick={() => setShowRegister(true)}>Register a machine</Button>
+              <p className="text-sm text-muted-foreground mb-3">{t('machines.noMachines')}</p>
+              <Button size="sm" onClick={() => setShowRegister(true)}>{t('machines.connectFirst')}</Button>
             </div>
           )}
         </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, teamId }: Props) {
   const [name, setName] = useState('');
   const router = useRouter();
   const utils = trpc.useUtils();
+  const { t } = useTranslation();
 
   const createWorkspace = trpc.workspaces.create.useMutation({
     onSuccess: (workspace) => {
@@ -30,9 +32,9 @@ export function CreateWorkspaceDialog({ open, onOpenChange, teamId }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
-        <DialogTitle>Create Workspace</DialogTitle>
+        <DialogTitle>{t('workspace.create')}</DialogTitle>
         <DialogDescription>
-          Create a new workspace for your team and agents.
+          {t('workspace.createDesc')}
         </DialogDescription>
       </DialogHeader>
       <form
@@ -46,23 +48,23 @@ export function CreateWorkspaceDialog({ open, onOpenChange, teamId }: Props) {
         <div className="space-y-4">
           <div>
             <label htmlFor="ws-name" className="text-sm font-medium">
-              Workspace name
+              {t('workspace.name')}
             </label>
             <Input
               id="ws-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="My Workspace"
+              placeholder={t('workspace.namePlaceholder')}
               autoFocus
             />
           </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={!name.trim() || createWorkspace.isPending}>
-            {createWorkspace.isPending ? 'Creating...' : 'Create'}
+            {createWorkspace.isPending ? t('common.creating') : t('common.create')}
           </Button>
         </DialogFooter>
       </form>

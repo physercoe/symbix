@@ -25,7 +25,7 @@ export default function ResolveTeamPage() {
 
   return (
     <div className="flex h-screen items-center justify-center">
-      <p className="text-sm text-muted-foreground">Loading...</p>
+      <p className="text-sm text-muted-foreground">...</p>
     </div>
   );
 }

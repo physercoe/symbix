@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { wsManager } from '@/lib/ws';
 import { useMessageStore } from '@/stores/message-store';
 import { useAgentStore } from '@/stores/agent-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover } from '@/components/ui/popover';
-// DropdownMenu no longer needed for channel header
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { AddAgentToChannelDialog } from '@/components/channel/AddAgentToChannelDialog';
@@ -32,13 +32,13 @@ interface Props {
 type ChannelTab = 'chat' | 'tasks' | 'docs' | 'files' | 'links' | 'pinned';
 type ChannelView = ChannelTab | 'info';
 
-const CHANNEL_TABS: { id: ChannelTab; label: string }[] = [
-  { id: 'chat', label: 'Chat' },
-  { id: 'tasks', label: 'Tasks' },
-  { id: 'docs', label: 'Docs' },
-  { id: 'files', label: 'Files' },
-  { id: 'links', label: 'Links' },
-  { id: 'pinned', label: 'Pinned' },
+const TAB_KEYS: { id: ChannelTab; key: 'chat.tabs.chat' | 'chat.tabs.tasks' | 'chat.tabs.docs' | 'chat.tabs.files' | 'chat.tabs.links' | 'chat.tabs.pinned' }[] = [
+  { id: 'chat', key: 'chat.tabs.chat' },
+  { id: 'tasks', key: 'chat.tabs.tasks' },
+  { id: 'docs', key: 'chat.tabs.docs' },
+  { id: 'files', key: 'chat.tabs.files' },
+  { id: 'links', key: 'chat.tabs.links' },
+  { id: 'pinned', key: 'chat.tabs.pinned' },
 ];
 
 const statusDotColor: Record<string, string> = {
@@ -51,6 +51,7 @@ const statusDotColor: Record<string, string> = {
 
 export function ChatView({ workspaceId, channelId }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const [addAgentOpen, setAddAgentOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ChannelView>('chat');
@@ -132,7 +133,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
           {/* Channel name */}
           <div className="flex items-center min-w-0">
             <span className="text-muted-foreground mr-2">{isDM ? '@' : '#'}</span>
-            <h2 className="font-semibold text-sm">{channel?.name ?? 'Loading...'}</h2>
+            <h2 className="font-semibold text-sm">{channel?.name ?? t('common.loading')}</h2>
             {channel?.description && (
               <span className="ml-3 text-xs text-muted-foreground truncate hidden sm:inline">{channel.description}</span>
             )}
@@ -141,7 +142,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
           {/* Right actions */}
           <div className="flex items-center gap-1">
             {!isDM && (
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Channel info"
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title={t('channel.info')}
                 onClick={() => setActiveTab('info')}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
@@ -160,19 +161,19 @@ export function ChatView({ workspaceId, channelId }: Props) {
               }>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">{isDM ? 'Conversation' : 'Channel Members'}</p>
+                  <p className="text-sm font-semibold">{isDM ? t('channel.conversation') : t('channel.channelMembers')}</p>
                   <span className="text-xs text-muted-foreground">{totalMembers}</span>
                 </div>
                 {agentMembers.length > 0 && (
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Agents</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t('nav.agents')}</p>
                     {agentMembers.map((agent) => (
                       <div key={agent.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50 group">
                         <div className={cn('h-2 w-2 rounded-full shrink-0', statusDotColor[agent.status] ?? 'bg-gray-500')} />
                         <span className="truncate">{agent.name}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1 py-0">{agent.agentType === 'hosted_bot' ? 'Bot' : agent.agentType}</Badge>
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0">{agent.agentType === 'hosted_bot' ? t('agents.type.bot') : agent.agentType}</Badge>
                         {!isDM && (
-                          <button type="button" onClick={() => { if (confirm(`Remove ${agent.name}?`)) removeMember.mutate({ channelId, memberId: agent.memberId }); }}
+                          <button type="button" onClick={() => { if (confirm(t('members.removeConfirm', { name: agent.name }))) removeMember.mutate({ channelId, memberId: agent.memberId }); }}
                             className="ml-auto text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                           </button>
@@ -183,7 +184,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
                 )}
                 {userMembers.length > 0 && (
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Users</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t('chat.users')}</p>
                     {userMembers.map((member) => (
                       <div key={member.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm">
                         <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" />
@@ -193,7 +194,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
                   </div>
                 )}
                 {!isDM && (
-                  <><Separator /><Button variant="outline" size="sm" className="w-full" onClick={() => { setMembersOpen(false); setAddAgentOpen(true); }}>+ Add Agent</Button></>
+                  <><Separator /><Button variant="outline" size="sm" className="w-full" onClick={() => { setMembersOpen(false); setAddAgentOpen(true); }}>{t('channel.addAgent')}</Button></>
                 )}
               </div>
             </Popover>
@@ -203,7 +204,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
         {/* ── Tab bar (channels only, not DMs) ── */}
         {!isDM && (
           <div className="flex items-center gap-0.5 px-4 pb-1 overflow-x-auto">
-            {CHANNEL_TABS.map((tab) => (
+            {TAB_KEYS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -215,7 +216,7 @@ export function ChatView({ workspaceId, channelId }: Props) {
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
                 )}
               >
-                {tab.label}
+                {t(tab.key)}
               </button>
             ))}
           </div>

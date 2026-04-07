@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import {
   Dialog,
   DialogHeader,
@@ -32,19 +33,6 @@ interface Props {
 
 type Mode = 'hosted_bot' | 'machine_agent';
 
-const PRESET_LABELS: Record<PermissionPreset, string> = {
-  minimal: 'Minimal — chat only',
-  observer: 'Observer — read everything',
-  standard: 'Standard — channel read/write, workspace read',
-  full: 'Full — read/write everywhere',
-};
-
-const ACCESS_LABEL: Record<AccessLevel, string> = {
-  none: 'None',
-  read: 'Read',
-  read_write: 'Read & Write',
-};
-
 function PermissionsEditor({
   permissions,
   onChange,
@@ -52,8 +40,22 @@ function PermissionsEditor({
   permissions: AgentPermissions;
   onChange: (p: AgentPermissions) => void;
 }) {
+  const { t } = useTranslation();
   const currentPreset = detectPreset(permissions);
   const [showDetails, setShowDetails] = useState(false);
+
+  const PRESET_DESCRIPTIONS: Record<PermissionPreset, string> = {
+    minimal: t('spawnAgent.chatOnly'),
+    observer: t('spawnAgent.readEverything'),
+    standard: t('spawnAgent.channelRwWsRead'),
+    full: t('spawnAgent.fullAccess'),
+  };
+
+  const ACCESS_LABEL: Record<AccessLevel, string> = {
+    none: t('permissions.none'),
+    read: t('permissions.read'),
+    read_write: t('permissions.readWrite'),
+  };
 
   const handlePreset = (name: PermissionPreset) => {
     onChange({ ...PERMISSION_PRESETS[name] });
@@ -65,7 +67,7 @@ function PermissionsEditor({
 
   return (
     <div className="border-t pt-3">
-      <p className="text-sm font-medium mb-2">Permissions</p>
+      <p className="text-sm font-medium mb-2">{t('spawnAgent.permissions')}</p>
 
       {/* Preset selector */}
       <div className="grid grid-cols-2 gap-1.5 mb-3">
@@ -84,10 +86,7 @@ function PermissionsEditor({
             <span className="font-medium capitalize">{name}</span>
             <br />
             <span className="text-[10px] opacity-70">
-              {name === 'minimal' && 'Chat only'}
-              {name === 'observer' && 'Read everything'}
-              {name === 'standard' && 'Channel rw + ws read'}
-              {name === 'full' && 'Full access'}
+              {PRESET_DESCRIPTIONS[name]}
             </span>
           </button>
         ))}
@@ -99,9 +98,9 @@ function PermissionsEditor({
         onClick={() => setShowDetails(!showDetails)}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
       >
-        {showDetails ? '▼ Hide details' : '▶ Customize per resource'}
+        {showDetails ? `▼ ${t('spawnAgent.hideDetails')}` : `▶ ${t('spawnAgent.customizePerResource')}`}
         {currentPreset === 'custom' && (
-          <span className="ml-1 text-amber-400">(custom)</span>
+          <span className="ml-1 text-amber-400">({t('spawnAgent.custom')})</span>
         )}
       </button>
 
@@ -134,6 +133,7 @@ function PermissionsEditor({
 }
 
 export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Props) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>('hosted_bot');
   const [name, setName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
@@ -219,9 +219,9 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogHeader>
-        <DialogTitle>Add Agent</DialogTitle>
+        <DialogTitle>{t('spawnAgent.title')}</DialogTitle>
         <DialogDescription>
-          Create a hosted bot or spawn an agent on a connected machine.
+          {t('spawnAgent.desc')}
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit}>
@@ -238,7 +238,7 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
                   : 'border-input text-muted-foreground hover:bg-accent',
               )}
             >
-              Hosted Bot
+              {t('spawnAgent.hostedBot')}
             </button>
             <button
               type="button"
@@ -250,19 +250,19 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
                   : 'border-input text-muted-foreground hover:bg-accent',
               )}
             >
-              Machine Agent
+              {t('spawnAgent.machineAgent')}
             </button>
           </div>
 
           <div>
             <label htmlFor="agent-name" className="text-sm font-medium">
-              Name
+              {t('spawnAgent.agentName')}
             </label>
             <Input
               id="agent-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={mode === 'hosted_bot' ? 'Support Bot' : 'Claude Code'}
+              placeholder={mode === 'hosted_bot' ? t('spawnAgent.namePlaceholderBot') : t('spawnAgent.namePlaceholderMachine')}
               autoFocus
             />
           </div>
@@ -271,34 +271,34 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
             <>
               <div>
                 <label htmlFor="agent-role" className="text-sm font-medium">
-                  Role description
+                  {t('spawnAgent.roleDesc')}
                 </label>
                 <Input
                   id="agent-role"
                   value={roleDescription}
                   onChange={(e) => setRoleDescription(e.target.value)}
-                  placeholder="A helpful assistant for the team"
+                  placeholder={t('spawnAgent.roleDescPlaceholder')}
                 />
               </div>
               <div>
                 <label htmlFor="agent-prompt" className="text-sm font-medium">
-                  System prompt
+                  {t('spawnAgent.systemPrompt')}
                 </label>
                 <textarea
                   id="agent-prompt"
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
-                  placeholder="You are a helpful assistant..."
+                  placeholder={t('spawnAgent.systemPromptPlaceholder')}
                   rows={3}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
               <div className="border-t pt-3">
-                <p className="text-sm font-medium mb-2">LLM Configuration</p>
+                <p className="text-sm font-medium mb-2">{t('spawnAgent.llmConfig')}</p>
                 <div className="space-y-3">
                   <div>
                     <label htmlFor="agent-provider" className="text-xs text-muted-foreground">
-                      Provider
+                      {t('spawnAgent.provider')}
                     </label>
                     <select
                       id="agent-provider"
@@ -319,7 +319,7 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
                   </div>
                   <div>
                     <label htmlFor="agent-model" className="text-xs text-muted-foreground">
-                      Model
+                      {t('spawnAgent.model')}
                     </label>
                     <Input
                       id="agent-model"
@@ -330,7 +330,7 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
                   </div>
                   <div>
                     <label htmlFor="agent-baseurl" className="text-xs text-muted-foreground">
-                      Base URL <span className="text-muted-foreground">(optional, for custom endpoints)</span>
+                      {t('spawnAgent.baseUrl')} <span className="text-muted-foreground">({t('spawnAgent.baseUrlHint')})</span>
                     </label>
                     <Input
                       id="agent-baseurl"
@@ -341,7 +341,7 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
                   </div>
                   <div>
                     <label htmlFor="agent-apikey" className="text-xs text-muted-foreground">
-                      API Key <span className="text-muted-foreground">(optional, falls back to server default)</span>
+                      {t('spawnAgent.apiKey')} <span className="text-muted-foreground">({t('spawnAgent.apiKeyHint')})</span>
                     </label>
                     <Input
                       id="agent-apikey"
@@ -360,11 +360,11 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
             <>
               <div>
                 <label htmlFor="agent-machine" className="text-sm font-medium">
-                  Machine
+                  {t('spawnAgent.machine')}
                 </label>
                 {onlineMachines.length === 0 ? (
                   <p className="text-sm text-muted-foreground mt-1">
-                    No online machines. Register and connect a machine first.
+                    {t('spawnAgent.noMachines')}
                   </p>
                 ) : (
                   <select
@@ -373,7 +373,7 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
                     onChange={(e) => setMachineId(e.target.value)}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="">Select a machine...</option>
+                    <option value="">{t('spawnAgent.selectMachine')}</option>
                     {onlineMachines.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name} ({m.machineType})
@@ -384,7 +384,7 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
               </div>
               <div>
                 <label htmlFor="agent-adapter" className="text-sm font-medium">
-                  Adapter
+                  {t('spawnAgent.adapter')}
                 </label>
                 <select
                   id="agent-adapter"
@@ -405,13 +405,13 @@ export function SpawnAgentDialog({ workspaceId, teamId, open, onOpenChange }: Pr
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={handleClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="submit"
             disabled={!name.trim() || isPending || (mode === 'machine_agent' && !machineId)}
           >
-            {isPending ? 'Creating...' : mode === 'hosted_bot' ? 'Create Bot' : 'Spawn Agent'}
+            {isPending ? t('common.creating') : mode === 'hosted_bot' ? t('spawnAgent.createBot') : t('spawnAgent.spawnAgent')}
           </Button>
         </DialogFooter>
       </form>

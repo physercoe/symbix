@@ -5,6 +5,7 @@ import { trpc } from '@/lib/trpc';
 import { wsManager } from '@/lib/ws';
 import { useMessageStore } from '@/stores/message-store';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const MAX_FILES = 10;
@@ -61,6 +62,7 @@ export function MessageInput({ channelId, workspaceId, replyTo, onCancelReply }:
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [mentionStart, setMentionStart] = useState(-1);
+  const { t } = useTranslation();
 
   const { data: members } = trpc.channels.listMembers.useQuery({ channelId });
   const { data: allAgents } = trpc.agents.list.useQuery({ workspaceId });
@@ -236,7 +238,7 @@ export function MessageInput({ channelId, workspaceId, replyTo, onCancelReply }:
               >
                 <div className="h-2 w-2 rounded-full bg-violet-500 shrink-0" />
                 <span className="truncate">{s.name}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground">agent</span>
+                <span className="ml-auto text-[10px] text-muted-foreground">{t('chat.agent')}</span>
               </button>
             ))}
           </div>
@@ -250,7 +252,7 @@ export function MessageInput({ channelId, workspaceId, replyTo, onCancelReply }:
             </svg>
             <span className="text-xs font-medium text-blue-400">{replyTo.senderName}</span>
             <span className="text-xs text-muted-foreground truncate flex-1">
-              {replyTo.content?.slice(0, 80) || '(attachment)'}
+              {replyTo.content?.slice(0, 80) || t('chat.attachment')}
             </span>
             <button type="button" onClick={onCancelReply} className="shrink-0 text-muted-foreground hover:text-foreground">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -294,7 +296,7 @@ export function MessageInput({ channelId, workspaceId, replyTo, onCancelReply }:
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex h-16 w-16 items-center justify-center rounded-md border border-dashed text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
-                title={`Add more (${MAX_FILES - files.length} remaining)`}
+                title={t('chat.addMore', { remaining: MAX_FILES - files.length })}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -320,7 +322,7 @@ export function MessageInput({ channelId, workspaceId, replyTo, onCancelReply }:
             size="icon"
             className="shrink-0 h-9 w-9"
             onClick={() => fileInputRef.current?.click()}
-            title={`Attach files (max ${MAX_FILES})`}
+            title={t('chat.attachFiles', { max: MAX_FILES })}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -332,7 +334,7 @@ export function MessageInput({ channelId, workspaceId, replyTo, onCancelReply }:
             value={content}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (@ to mention an agent)"
+            placeholder={t('chat.placeholder')}
             rows={1}
             className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 overflow-hidden"
           />

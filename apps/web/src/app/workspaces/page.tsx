@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
@@ -14,6 +15,7 @@ export default function HomePage() {
   const [createOpen, setCreateOpen] = useState(false);
   const { data: workspaces, isLoading } = trpc.workspaces.list.useQuery();
   const { data: teams } = trpc.teams.list.useQuery();
+  const { t } = useTranslation();
 
   // Auto-redirect to team dashboard if user has teams
   useEffect(() => {
@@ -35,8 +37,8 @@ export default function HomePage() {
               {teams[0].name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Go to {teams[0].name}</p>
-              <p className="text-xs text-muted-foreground">Team dashboard with agents, members, and metrics</p>
+              <p className="font-medium text-sm">{t('home.goToTeam', { name: teams[0].name })}</p>
+              <p className="text-xs text-muted-foreground">{t('home.teamDashboardDesc')}</p>
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-muted-foreground">
               <polyline points="9 18 15 12 9 6" />
@@ -46,18 +48,18 @@ export default function HomePage() {
 
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold">Home</h1>
+          <h1 className="text-2xl font-bold">{t('home.title')}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Your workspaces and toolkit at a glance.
+            {t('home.subtitle')}
           </p>
         </div>
 
         {/* Workspaces */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Workspaces</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t('nav.workspaces')}</h2>
             <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => setCreateOpen(true)}>
-              + New Workspace
+              + {t('nav.newWorkspace')}
             </Button>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -84,8 +86,8 @@ export default function HomePage() {
             ))}
             {workspaces && workspaces.length === 0 && (
               <div className="col-span-2 rounded-lg border border-dashed p-6 text-center">
-                <p className="text-sm text-muted-foreground mb-3">No workspaces yet</p>
-                <Button size="sm" onClick={() => setCreateOpen(true)}>Create your first workspace</Button>
+                <p className="text-sm text-muted-foreground mb-3">{t('home.noWorkspaces')}</p>
+                <Button size="sm" onClick={() => setCreateOpen(true)}>{t('home.createFirst')}</Button>
               </div>
             )}
           </div>
@@ -96,9 +98,9 @@ export default function HomePage() {
         {/* Toolkit quick access */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Toolkit</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t('nav.toolkit')}</h2>
             <Link href="/toolkit/specs" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              View all →
+              {t('common.viewAll')} →
             </Link>
           </div>
 
@@ -109,9 +111,9 @@ export default function HomePage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                 </svg>
-                <span className="text-sm font-medium">Specs</span>
+                <span className="text-sm font-medium">{t('nav.specs')}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Agent &amp; workspace specs</p>
+              <p className="text-xs text-muted-foreground">{t('home.agentAndWorkspaceSpecs')}</p>
             </Link>
 
             {/* Patterns card */}
@@ -120,9 +122,9 @@ export default function HomePage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-400">
                   <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
                 </svg>
-                <span className="text-sm font-medium">Patterns</span>
+                <span className="text-sm font-medium">{t('nav.patterns')}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Reusable code &amp; prompts</p>
+              <p className="text-xs text-muted-foreground">{t('home.reusableCodeAndPrompts')}</p>
             </Link>
 
             {/* References card */}
@@ -131,9 +133,9 @@ export default function HomePage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                 </svg>
-                <span className="text-sm font-medium">References</span>
+                <span className="text-sm font-medium">{t('nav.references')}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Saved messages &amp; links</p>
+              <p className="text-xs text-muted-foreground">{t('home.savedMessagesAndLinks')}</p>
             </Link>
           </div>
         </section>

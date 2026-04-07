@@ -2,10 +2,12 @@
 
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeamMetricsPage() {
   const { teamSlug } = useParams() as { teamSlug: string };
+  const { t } = useTranslation();
   const { data: team } = trpc.teams.getBySlug.useQuery({ slug: teamSlug });
   const { data: overview, isLoading } = trpc.metrics.teamOverview.useQuery(
     { teamId: team?.id ?? '' },
@@ -28,8 +30,8 @@ export default function TeamMetricsPage() {
     <div className="flex h-full overflow-auto">
       <div className="w-full max-w-4xl mx-auto p-8 space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">Metrics</h1>
-          <p className="text-sm text-muted-foreground mt-1">Team activity overview</p>
+          <h1 className="text-2xl font-bold">{t('nav.metrics')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t('dashboard.teamDashboard')}</p>
         </div>
 
         {/* Summary cards */}
@@ -38,11 +40,11 @@ export default function TeamMetricsPage() {
             Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)
           ) : (
             <>
-              <MetricCard label="Messages (7d)" value={overview?.messages7d ?? 0} />
-              <MetricCard label="Members" value={overview?.members ?? 0} />
-              <MetricCard label="Workspaces" value={overview?.workspaces ?? 0} />
-              <MetricCard label="Active Agents" value={overview?.agents.active ?? 0} />
-              <MetricCard label="Online Machines" value={overview?.machines.online ?? 0} />
+              <MetricCard label={t('dashboard.messages7d')} value={overview?.messages7d ?? 0} />
+              <MetricCard label={t('nav.members')} value={overview?.members ?? 0} />
+              <MetricCard label={t('nav.workspaces')} value={overview?.workspaces ?? 0} />
+              <MetricCard label={`${t('agents.status.active')} ${t('nav.agents')}`} value={overview?.agents.active ?? 0} />
+              <MetricCard label={`${t('dashboard.online')} ${t('nav.machines')}`} value={overview?.machines.online ?? 0} />
             </>
           )}
         </div>

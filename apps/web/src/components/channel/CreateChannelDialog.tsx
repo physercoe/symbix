@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ export function CreateChannelDialog({ workspaceId, open, onOpenChange }: Props) 
   const [type, setType] = useState<'public' | 'private'>('public');
   const router = useRouter();
   const utils = trpc.useUtils();
+  const { t } = useTranslation();
 
   const createChannel = trpc.channels.create.useMutation({
     onSuccess: (channel) => {
@@ -43,8 +45,8 @@ export function CreateChannelDialog({ workspaceId, open, onOpenChange }: Props) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Channel</DialogTitle>
-          <DialogDescription>Add a new channel to your workspace.</DialogDescription>
+          <DialogTitle>{t('channel.create')}</DialogTitle>
+          <DialogDescription>{t('channel.createDesc')}</DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(e) => {
@@ -62,43 +64,43 @@ export function CreateChannelDialog({ workspaceId, open, onOpenChange }: Props) 
           <div className="space-y-4">
             <div>
               <label htmlFor="ch-name" className="text-sm font-medium">
-                Channel name
+                {t('channel.name')}
               </label>
               <Input
                 id="ch-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="general"
+                placeholder={t('channel.namePlaceholder')}
                 autoFocus
               />
             </div>
             <div>
               <label htmlFor="ch-desc" className="text-sm font-medium">
-                Description <span className="text-muted-foreground">(optional)</span>
+                {t('channel.description')} <span className="text-muted-foreground">({t('common.optional')})</span>
               </label>
               <Input
                 id="ch-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="What is this channel about?"
+                placeholder={t('channel.descPlaceholder')}
               />
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">Type</p>
+              <p className="text-sm font-medium mb-2">{t('channel.type')}</p>
               <div className="flex gap-2">
-                {(['public', 'private'] as const).map((t) => (
+                {(['public', 'private'] as const).map((tp) => (
                   <button
-                    key={t}
+                    key={tp}
                     type="button"
-                    onClick={() => setType(t)}
+                    onClick={() => setType(tp)}
                     className={cn(
-                      'flex-1 rounded-md border px-3 py-2 text-sm capitalize transition-colors',
-                      type === t
+                      'flex-1 rounded-md border px-3 py-2 text-sm transition-colors',
+                      type === tp
                         ? 'border-primary bg-primary/10 text-foreground'
                         : 'border-input text-muted-foreground hover:bg-accent',
                     )}
                   >
-                    {t === 'public' ? '# Public' : '# Private'}
+                    {tp === 'public' ? t('channel.public') : t('channel.private')}
                   </button>
                 ))}
               </div>
@@ -106,10 +108,10 @@ export function CreateChannelDialog({ workspaceId, open, onOpenChange }: Props) 
           </div>
           <DialogFooter className="mt-6">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={!name.trim() || createChannel.isPending}>
-              {createChannel.isPending ? 'Creating...' : 'Create'}
+              {createChannel.isPending ? t('common.creating') : t('common.create')}
             </Button>
           </DialogFooter>
         </form>

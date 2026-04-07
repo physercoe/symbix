@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useUser, UserButton } from '@clerk/nextjs';
 import { trpc } from '@/lib/trpc';
+import { useTranslation, useLocaleStore } from '@/lib/i18n';
+import type { Locale } from '@/lib/i18n';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -71,6 +73,7 @@ function NavLink({ href, label, icon, pathname, exact, count }: NavLinkProps) {
 }
 
 function PlusButton({ onClick, title }: { onClick: () => void; title: string }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -81,7 +84,7 @@ function PlusButton({ onClick, title }: { onClick: () => void; title: string }) 
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
         <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
       </svg>
-      <span>New workspace</span>
+      <span>{t('nav.newWorkspace')}</span>
     </button>
   );
 }
@@ -118,6 +121,9 @@ function LightbulbIcon() {
 function BoxIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>;
 }
+function GlobeIcon() {
+  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>;
+}
 
 // ── Main Component ────────────────────────────────────────────────
 
@@ -126,6 +132,8 @@ export function TeamSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUser();
+  const { t } = useTranslation();
+  const { locale, setLocale } = useLocaleStore();
   const teamSlug = params.teamSlug as string;
 
   const [createWsOpen, setCreateWsOpen] = useState(false);
@@ -146,6 +154,10 @@ export function TeamSidebar() {
   }, [teamSlug]);
 
   const base = `/t/${teamSlug}`;
+
+  const toggleLocale = () => {
+    setLocale(locale === 'en' ? 'zh' : 'en');
+  };
 
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar text-sidebar-foreground border-r">
@@ -171,20 +183,20 @@ export function TeamSidebar() {
           {teams && teams.length > 0 && (
             <>
               <DropdownMenuItem onClick={() => router.push(base)}>
-                Team dashboard
+                {t('nav.teamDashboard')}
               </DropdownMenuItem>
               <div className="my-1 h-px bg-border" />
-              <p className="px-2 py-1 text-xs text-muted-foreground">Switch team</p>
-              {teams.map((t) => (
+              <p className="px-2 py-1 text-xs text-muted-foreground">{t('nav.switchTeam')}</p>
+              {teams.map((tm) => (
                 <DropdownMenuItem
-                  key={t.id}
-                  onClick={() => router.push(`/t/${t.slug}`)}
-                  className={cn(t.slug === teamSlug && 'bg-accent')}
+                  key={tm.id}
+                  onClick={() => router.push(`/t/${tm.slug}`)}
+                  className={cn(tm.slug === teamSlug && 'bg-accent')}
                 >
                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground text-[10px] font-semibold mr-2">
-                    {t.name.charAt(0).toUpperCase()}
+                    {tm.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="truncate">{t.name}</span>
+                  <span className="truncate">{tm.name}</span>
                 </DropdownMenuItem>
               ))}
             </>
@@ -194,7 +206,7 @@ export function TeamSidebar() {
 
       <ScrollArea className="flex-1 px-2 py-1">
         {/* ── Workspaces ─────────────────────────────── */}
-        <SectionLabel>Workspaces</SectionLabel>
+        <SectionLabel>{t('nav.workspaces')}</SectionLabel>
         <div className="space-y-0.5">
           {workspaces?.map((ws) => {
             const wsHref = `${base}/workspaces/${ws.id}`;
@@ -215,41 +227,50 @@ export function TeamSidebar() {
               </Link>
             );
           })}
-          <PlusButton onClick={() => setCreateWsOpen(true)} title="Create workspace" />
+          <PlusButton onClick={() => setCreateWsOpen(true)} title={t('workspace.create')} />
         </div>
 
         {/* ── Team ───────────────────────────────────── */}
-        <SectionLabel>Team</SectionLabel>
+        <SectionLabel>{t('nav.team')}</SectionLabel>
         <div className="space-y-0.5">
-          <NavLink href={`${base}/members`} label="Members" icon={<UsersIcon />} pathname={pathname} />
-          <NavLink href={`${base}/agents`} label="Agents" icon={<BotIcon />} pathname={pathname} count={agents?.length} />
-          <NavLink href={`${base}/machines`} label="Machines" icon={<MonitorIcon />} pathname={pathname} />
+          <NavLink href={`${base}/members`} label={t('nav.members')} icon={<UsersIcon />} pathname={pathname} />
+          <NavLink href={`${base}/agents`} label={t('nav.agents')} icon={<BotIcon />} pathname={pathname} count={agents?.length} />
+          <NavLink href={`${base}/machines`} label={t('nav.machines')} icon={<MonitorIcon />} pathname={pathname} />
         </div>
 
         {/* ── Toolkit ────────────────────────────────── */}
-        <SectionLabel>Toolkit</SectionLabel>
+        <SectionLabel>{t('nav.toolkit')}</SectionLabel>
         <div className="space-y-0.5">
-          <NavLink href={`${base}/toolkit?tab=specs`} label="Specs" icon={<SpecsIcon />} pathname={pathname} exact />
-          <NavLink href={`${base}/toolkit?tab=patterns`} label="Patterns" icon={<PatternsIcon />} pathname={pathname} exact />
-          <NavLink href={`${base}/toolkit?tab=references`} label="References" icon={<BookmarkIcon />} pathname={pathname} exact />
-          <NavLink href={`${base}/toolkit?tab=insights`} label="Insights" icon={<LightbulbIcon />} pathname={pathname} exact />
-          <NavLink href={`${base}/toolkit?tab=assets`} label="Assets" icon={<BoxIcon />} pathname={pathname} exact />
+          <NavLink href={`${base}/toolkit?tab=specs`} label={t('nav.specs')} icon={<SpecsIcon />} pathname={pathname} exact />
+          <NavLink href={`${base}/toolkit?tab=patterns`} label={t('nav.patterns')} icon={<PatternsIcon />} pathname={pathname} exact />
+          <NavLink href={`${base}/toolkit?tab=references`} label={t('nav.references')} icon={<BookmarkIcon />} pathname={pathname} exact />
+          <NavLink href={`${base}/toolkit?tab=insights`} label={t('nav.insights')} icon={<LightbulbIcon />} pathname={pathname} exact />
+          <NavLink href={`${base}/toolkit?tab=assets`} label={t('nav.assets')} icon={<BoxIcon />} pathname={pathname} exact />
         </div>
 
         {/* ── Admin ──────────────────────────────────── */}
         <Separator className="my-3" />
         <div className="space-y-0.5">
-          <NavLink href={`${base}/metrics`} label="Metrics" icon={<ChartIcon />} pathname={pathname} />
-          <NavLink href={`${base}/settings`} label="Settings" icon={<SettingsIcon />} pathname={pathname} />
+          <NavLink href={`${base}/metrics`} label={t('nav.metrics')} icon={<ChartIcon />} pathname={pathname} />
+          <NavLink href={`${base}/settings`} label={t('nav.settings')} icon={<SettingsIcon />} pathname={pathname} />
         </div>
       </ScrollArea>
 
       <Separator />
 
-      {/* User */}
+      {/* User + Language */}
       <div className="flex items-center gap-2 p-3">
         <UserButton afterSignOutUrl="/sign-in" />
-        <span className="truncate text-sm">{user?.firstName ?? user?.username ?? 'User'}</span>
+        <span className="truncate text-sm flex-1">{user?.firstName ?? user?.username ?? t('common.user')}</span>
+        <button
+          type="button"
+          onClick={toggleLocale}
+          title={t('settings.language')}
+          className="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
+        >
+          <GlobeIcon />
+          <span>{locale === 'en' ? 'EN' : '中'}</span>
+        </button>
       </div>
 
       {/* Dialogs */}
