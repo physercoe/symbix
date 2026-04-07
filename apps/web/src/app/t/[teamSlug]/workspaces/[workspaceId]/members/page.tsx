@@ -2,11 +2,13 @@
 
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WorkspaceMembersPage() {
   const { workspaceId } = useParams() as { workspaceId: string };
+  const { t } = useTranslation();
   const { data: members, isLoading } = trpc.workspaces.listMembers.useQuery({ workspaceId });
 
   const userMembers = members?.filter((m) => m.memberType === 'user') ?? [];
@@ -15,11 +17,11 @@ export default function WorkspaceMembersPage() {
   return (
     <div className="flex h-full overflow-auto">
       <div className="w-full max-w-3xl mx-auto p-8 space-y-6">
-        <h1 className="text-2xl font-bold">Workspace Members</h1>
+        <h1 className="text-2xl font-bold">{t('workspace.members')}</h1>
 
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            People ({userMembers.length})
+            {t('members.people')} ({userMembers.length})
           </h2>
           <div className="space-y-2">
             {isLoading && Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
@@ -28,7 +30,7 @@ export default function WorkspaceMembersPage() {
                 <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-xs font-semibold">
                   {(m.userName ?? 'U').charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm flex-1">{m.userName ?? 'Unknown'}</span>
+                <span className="text-sm flex-1">{m.userName ?? t('common.unknown')}</span>
                 <Badge variant="outline" className="text-[10px]">{m.role}</Badge>
               </div>
             ))}
@@ -38,7 +40,7 @@ export default function WorkspaceMembersPage() {
         {agentMembers.length > 0 && (
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Deployed Agents ({agentMembers.length})
+              {t('agents.deployedAgents')} ({agentMembers.length})
             </h2>
             <div className="space-y-2">
               {agentMembers.map((m) => (
@@ -47,7 +49,7 @@ export default function WorkspaceMembersPage() {
                     A
                   </div>
                   <span className="text-sm flex-1">{m.agentId}</span>
-                  <Badge variant="outline" className="text-[10px]">agent</Badge>
+                  <Badge variant="outline" className="text-[10px]">{t('agents.agent')}</Badge>
                 </div>
               ))}
             </div>

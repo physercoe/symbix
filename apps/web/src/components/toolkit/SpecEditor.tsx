@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -57,6 +58,7 @@ interface Props {
 }
 
 export function SpecEditor({ specType: initialType }: Props) {
+  const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [activeType, setActiveType] = useState<SpecType | 'all'>(initialType ?? 'all');
@@ -302,15 +304,15 @@ export function SpecEditor({ specType: initialType }: Props) {
       <div className="shrink-0 border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold">Specs</h1>
-            <p className="text-sm text-muted-foreground">Structured agent and workspace blueprints</p>
+            <h1 className="text-lg font-semibold">{t('toolkit.specs')}</h1>
+            <p className="text-sm text-muted-foreground">{t('toolkit.specsDesc')}</p>
           </div>
           <div className="flex gap-1">
             <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => startCreate('agent')}>
-              + Agent Spec
+              {t('toolkit.agentSpec')}
             </Button>
             <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => startCreate('workspace')}>
-              + Workspace Spec
+              {t('toolkit.workspaceSpec')}
             </Button>
           </div>
         </div>
@@ -326,7 +328,7 @@ export function SpecEditor({ specType: initialType }: Props) {
                 activeType === tab ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
               )}
             >
-              {tab === 'all' ? 'All' : tab === 'agent' ? 'Agent Specs' : 'Workspace Specs'}
+              {tab === 'all' ? t('toolkit.all') : tab === 'agent' ? t('toolkit.agentSpecs') : t('toolkit.workspaceSpecs')}
             </button>
           ))}
         </div>
@@ -335,21 +337,21 @@ export function SpecEditor({ specType: initialType }: Props) {
       {/* Create form */}
       {creating && (
         <div className="shrink-0 border-b px-6 py-4 bg-accent/20">
-          <p className="text-sm font-medium mb-3">New {formType} spec</p>
+          <p className="text-sm font-medium mb-3">{t('toolkit.newSpec', { type: formType })}</p>
           <div className="space-y-2 max-w-2xl">
             <div className="flex gap-2">
-              <input autoFocus value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Spec name"
+              <input autoFocus value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('toolkit.specName')}
                 className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
               <select value={formVisibility} onChange={(e) => setFormVisibility(e.target.value as SpecVisibility)}
                 className="rounded-md border border-input bg-background px-3 py-1.5 text-sm">
-                <option value="private">Private</option>
-                <option value="workspace">Workspace</option>
-                <option value="public">Public</option>
+                <option value="private">{t('toolkit.visibility.private')}</option>
+                <option value="workspace">{t('toolkit.visibility.workspace')}</option>
+                <option value="public">{t('toolkit.visibility.public')}</option>
               </select>
             </div>
-            <input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder="Description (optional)"
+            <input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder={t('toolkit.descOptional')}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-            <input value={formCategory} onChange={(e) => setFormCategory(e.target.value)} placeholder="Category (optional)"
+            <input value={formCategory} onChange={(e) => setFormCategory(e.target.value)} placeholder={t('toolkit.categoryOptional')}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <textarea
               value={formContent}
@@ -359,8 +361,8 @@ export function SpecEditor({ specType: initialType }: Props) {
             />
             {jsonError && <p className="text-xs text-red-400">{jsonError}</p>}
             <div className="flex gap-2 pt-1">
-              <Button size="sm" className="h-8 text-xs" disabled={!formName.trim()} onClick={handleCreate}>Create</Button>
-              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setCreating(false)}>Cancel</Button>
+              <Button size="sm" className="h-8 text-xs" disabled={!formName.trim()} onClick={handleCreate}>{t('common.create')}</Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setCreating(false)}>{t('common.cancel')}</Button>
             </div>
           </div>
         </div>
@@ -371,10 +373,10 @@ export function SpecEditor({ specType: initialType }: Props) {
         {/* Spec list */}
         <ScrollArea className="w-72 border-r">
           <div className="p-2 space-y-0.5">
-            {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Loading...</p>}
+            {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">{t('common.loading')}</p>}
             {specs && specs.length === 0 && (
               <p className="px-3 py-6 text-xs text-muted-foreground text-center">
-                No specs yet. Create one to define reusable agent or workspace configurations.
+                {t('toolkit.noSpecs')}
               </p>
             )}
             {specs?.map((spec) => (
@@ -432,12 +434,12 @@ export function SpecEditor({ specType: initialType }: Props) {
                 <div className="flex gap-1">
                   <Button variant="outline" size="sm" className="text-xs h-7"
                     onClick={() => editing ? setEditing(false) : startEdit(selectedSpec.content as Record<string, unknown>)}>
-                    {editing ? 'Preview' : 'Edit JSON'}
+                    {editing ? t('common.preview') : t('toolkit.editJson')}
                   </Button>
                   <Button variant="outline" size="sm"
                     className="text-red-400 border-red-400/30 hover:bg-red-400/10 text-xs h-7"
-                    onClick={() => { if (confirm('Delete this spec?')) deleteSpec.mutate({ id: selectedSpec.id }); }}>
-                    Delete
+                    onClick={() => { if (confirm(t('toolkit.deleteConfirm'))) deleteSpec.mutate({ id: selectedSpec.id }); }}>
+                    {t('common.delete')}
                   </Button>
                 </div>
               </div>
@@ -452,8 +454,8 @@ export function SpecEditor({ specType: initialType }: Props) {
                   />
                   {editError && <p className="text-xs text-red-400">{editError}</p>}
                   <div className="flex gap-2">
-                    <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveEdit(selectedSpec.id)}>Save</Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
+                    <Button size="sm" className="h-8 text-xs" onClick={() => handleSaveEdit(selectedSpec.id)}>{t('common.save')}</Button>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setEditing(false)}>{t('common.cancel')}</Button>
                   </div>
                 </div>
               ) : (
@@ -464,7 +466,7 @@ export function SpecEditor({ specType: initialType }: Props) {
             </div>
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
-              <p className="text-sm">Select a spec to view or edit</p>
+              <p className="text-sm">{t('toolkit.selectSpec')}</p>
             </div>
           )}
         </ScrollArea>

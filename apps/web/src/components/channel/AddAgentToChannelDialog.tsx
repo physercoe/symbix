@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import {
   Dialog,
   DialogHeader,
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function AddAgentToChannelDialog({ workspaceId, channelId, open, onOpenChange }: Props) {
+  const { t } = useTranslation();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const utils = trpc.useUtils();
 
@@ -42,17 +44,17 @@ export function AddAgentToChannelDialog({ workspaceId, channelId, open, onOpenCh
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
-        <DialogTitle>Add Agent to Channel</DialogTitle>
+        <DialogTitle>{t('channel.addAgentTitle' as any)}</DialogTitle>
         <DialogDescription>
-          Select an agent to add to this channel.
+          {t('channel.addAgentDesc' as any)}
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {availableAgents.length === 0 && (
           <p className="text-sm text-muted-foreground py-2">
             {agents?.length === 0
-              ? 'No agents in this workspace. Create one in Settings first.'
-              : 'All agents are already in this channel.'}
+              ? t('channel.noAgentsToAdd' as any)
+              : t('channel.allAgentsAdded' as any)}
           </p>
         )}
         {availableAgents.map((agent) => (
@@ -79,7 +81,7 @@ export function AddAgentToChannelDialog({ workspaceId, channelId, open, onOpenCh
       </div>
       <DialogFooter>
         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-          Cancel
+          {t('common.cancel' as any)}
         </Button>
         <Button
           type="button"
@@ -94,7 +96,7 @@ export function AddAgentToChannelDialog({ workspaceId, channelId, open, onOpenCh
             }
           }}
         >
-          {addMember.isPending ? 'Adding...' : 'Add to Channel'}
+          {addMember.isPending ? t('common.adding' as any) : t('channel.addToChannel' as any)}
         </Button>
       </DialogFooter>
     </Dialog>

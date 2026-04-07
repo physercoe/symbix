@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useTranslation } from '@/lib/i18n';
 
 interface Props {
   channelId: string;
 }
 
 export function ChannelLinksView({ channelId }: Props) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const { data: links } = trpc.channelItems.list.useQuery({ channelId, type: 'link' });
@@ -26,21 +28,21 @@ export function ChannelLinksView({ channelId }: Props) {
     <ScrollArea className="flex-1 p-6">
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Links</h2>
-          <span className="text-xs text-muted-foreground">{links?.length ?? 0} saved</span>
+          <h2 className="text-lg font-semibold">{t('links.title' as any)}</h2>
+          <span className="text-xs text-muted-foreground">{links?.length ?? 0} {t('links.saved' as any)}</span>
         </div>
 
         {/* Quick add */}
         <form onSubmit={(e) => { e.preventDefault(); if (title.trim() && url.trim()) create.mutate({ channelId, type: 'link', title: title.trim(), url: url.trim() }); }}
           className="mb-6 flex gap-2">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title"
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('common.title' as any)}
             className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..."
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={t('links.urlPlaceholder' as any)}
             className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-          <Button type="submit" size="sm" disabled={!title.trim() || !url.trim() || create.isPending}>Add</Button>
+          <Button type="submit" size="sm" disabled={!title.trim() || !url.trim() || create.isPending}>{t('common.add' as any)}</Button>
         </form>
 
-        {!links?.length && <p className="text-sm text-muted-foreground text-center py-8">No saved links yet.</p>}
+        {!links?.length && <p className="text-sm text-muted-foreground text-center py-8">{t('links.noLinks' as any)}</p>}
 
         <div className="space-y-2">
           {links?.map((link) => (
@@ -56,7 +58,7 @@ export function ChannelLinksView({ channelId }: Props) {
                 </a>
                 <p className="text-xs text-muted-foreground truncate">{link.url}</p>
               </div>
-              <button type="button" onClick={() => { if (confirm('Remove?')) remove.mutate({ id: link.id }); }}
+              <button type="button" onClick={() => { if (confirm(t('links.removeConfirm' as any))) remove.mutate({ id: link.id }); }}
                 className="shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
               </button>

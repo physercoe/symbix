@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function AgentPanel({ agent, onClose }: Props) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(agent.name);
   const [roleDescription, setRoleDescription] = useState(agent.roleDescription);
@@ -104,22 +106,22 @@ export function AgentPanel({ agent, onClose }: Props) {
     return (
       <div className="rounded-lg border bg-card p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="font-semibold text-sm">Edit Agent</h4>
+          <h4 className="font-semibold text-sm">{t('agents.editAgent' as any)}</h4>
           <button onClick={() => setEditing(false)} className="text-muted-foreground hover:text-foreground text-sm">
-            Cancel
+            {t('common.cancel' as any)}
           </button>
         </div>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-muted-foreground">Name</label>
+            <label className="text-xs text-muted-foreground">{t('spawnAgent.agentName' as any)}</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Role description</label>
+            <label className="text-xs text-muted-foreground">{t('spawnAgent.roleDesc' as any)}</label>
             <Input value={roleDescription} onChange={(e) => setRoleDescription(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">System prompt</label>
+            <label className="text-xs text-muted-foreground">{t('spawnAgent.systemPrompt' as any)}</label>
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
@@ -130,9 +132,9 @@ export function AgentPanel({ agent, onClose }: Props) {
           {agent.agentType === 'hosted_bot' && (
             <>
               <Separator />
-              <p className="text-xs font-medium">LLM Configuration</p>
+              <p className="text-xs font-medium">{t('spawnAgent.llmConfig' as any)}</p>
               <div>
-                <label className="text-xs text-muted-foreground">Provider</label>
+                <label className="text-xs text-muted-foreground">{t('spawnAgent.provider' as any)}</label>
                 <select
                   value={llmProvider}
                   onChange={(e) => {
@@ -150,11 +152,11 @@ export function AgentPanel({ agent, onClose }: Props) {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Model</label>
+                <label className="text-xs text-muted-foreground">{t('spawnAgent.model' as any)}</label>
                 <Input value={llmModel} onChange={(e) => setLlmModel(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Base URL (optional)</label>
+                <label className="text-xs text-muted-foreground">{t('spawnAgent.baseUrl' as any)}</label>
                 <Input
                   value={llmBaseUrl}
                   onChange={(e) => setLlmBaseUrl(e.target.value)}
@@ -162,7 +164,7 @@ export function AgentPanel({ agent, onClose }: Props) {
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">API Key (optional, falls back to server default)</label>
+                <label className="text-xs text-muted-foreground">{t('spawnAgent.apiKey' as any)}</label>
                 <Input
                   type="password"
                   value={llmApiKey}
@@ -182,11 +184,11 @@ export function AgentPanel({ agent, onClose }: Props) {
               className="rounded border-input"
             />
             <label htmlFor="auto-respond" className="text-xs">
-              Auto-respond to all messages (no @mention needed)
+              {t('agents.autoRespondLabel' as any)}
             </label>
           </div>
           <Separator />
-          <p className="text-xs font-medium">Permissions</p>
+          <p className="text-xs font-medium">{t('spawnAgent.permissions' as any)}</p>
           <div className="grid grid-cols-2 gap-1">
             {PERMISSION_PRESET_NAMES.map((preset) => (
               <button
@@ -229,7 +231,7 @@ export function AgentPanel({ agent, onClose }: Props) {
           onClick={handleSave}
           disabled={!name.trim() || updateAgent.isPending}
         >
-          {updateAgent.isPending ? 'Saving...' : 'Save'}
+          {updateAgent.isPending ? t('common.saving' as any) : t('common.save' as any)}
         </Button>
       </div>
     );
@@ -240,7 +242,7 @@ export function AgentPanel({ agent, onClose }: Props) {
       <div className="flex items-center justify-between">
         <h4 className="font-semibold">{agent.name}</h4>
         <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">
-          Close
+          {t('common.close' as any)}
         </button>
       </div>
 
@@ -250,13 +252,13 @@ export function AgentPanel({ agent, onClose }: Props) {
         </Badge>
         <Badge variant="secondary" className="text-xs">{agent.agentType}</Badge>
         {(agent.config as Record<string, unknown>)?.autoRespond === true && (
-          <Badge variant="secondary" className="text-xs">auto-respond</Badge>
+          <Badge variant="secondary" className="text-xs">{t('agents.autoRespond' as any)}</Badge>
         )}
       </div>
 
       {agent.roleDescription && (
         <div>
-          <p className="text-xs text-muted-foreground">Role</p>
+          <p className="text-xs text-muted-foreground">{t('members.role' as any)}</p>
           <p className="text-sm">{agent.roleDescription}</p>
         </div>
       )}
@@ -279,14 +281,14 @@ export function AgentPanel({ agent, onClose }: Props) {
           )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">API Key</span>
-            <span>{agent.llmApiKey ? '******** (custom)' : 'Server default'}</span>
+            <span>{agent.llmApiKey ? '******** (custom)' : t('agents.serverDefault' as any)}</span>
           </div>
         </div>
       )}
 
       {/* Permissions summary */}
       <div>
-        <p className="text-xs text-muted-foreground mb-1">Permissions</p>
+        <p className="text-xs text-muted-foreground mb-1">{t('spawnAgent.permissions' as any)}</p>
         <div className="flex flex-wrap gap-1">
           {(() => {
             const perms = resolvePermissions(agent.config);
@@ -313,7 +315,7 @@ export function AgentPanel({ agent, onClose }: Props) {
 
       <div className="flex gap-2 flex-wrap">
         <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-          Edit
+          {t('common.edit' as any)}
         </Button>
         {agent.status === 'sleeping' || agent.status === 'offline' ? (
           <Button
@@ -322,7 +324,7 @@ export function AgentPanel({ agent, onClose }: Props) {
             onClick={() => wake.mutate({ id: agent.id })}
             disabled={wake.isPending}
           >
-            {wake.isPending ? 'Waking...' : 'Wake'}
+            {wake.isPending ? t('agents.waking' as any) : t('agents.wake' as any)}
           </Button>
         ) : agent.status === 'active' ? (
           <Button
@@ -331,20 +333,20 @@ export function AgentPanel({ agent, onClose }: Props) {
             onClick={() => sleep.mutate({ id: agent.id })}
             disabled={sleep.isPending}
           >
-            {sleep.isPending ? 'Sleeping...' : 'Sleep'}
+            {sleep.isPending ? t('agents.sleeping' as any) : t('agents.sleep' as any)}
           </Button>
         ) : null}
         <Button
           size="sm"
           variant="destructive"
           onClick={() => {
-            if (confirm(`Delete agent "${agent.name}"?`)) {
+            if (confirm(t('agents.deleteConfirm' as any, { name: agent.name }))) {
               deleteAgent.mutate({ id: agent.id });
             }
           }}
           disabled={deleteAgent.isPending}
         >
-          Delete
+          {t('common.delete' as any)}
         </Button>
       </div>
     </div>

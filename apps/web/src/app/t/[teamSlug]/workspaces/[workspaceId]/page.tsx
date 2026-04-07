@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 
 export default function WorkspacePage() {
@@ -11,6 +12,7 @@ export default function WorkspacePage() {
   const teamSlug = params.teamSlug as string;
   const workspaceId = params.workspaceId as string;
 
+  const { t } = useTranslation();
   const { data: channels, isLoading, isError, error, refetch } = trpc.channels.list.useQuery(
     { workspaceId },
     { retry: 2 },
@@ -25,8 +27,8 @@ export default function WorkspacePage() {
   if (isError) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-        <p>Failed to load channels{error?.message ? `: ${error.message}` : ''}</p>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
+        <p>{t('workspace.loadFailed')}{error?.message ? `: ${error.message}` : ''}</p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>{t('common.retry')}</Button>
       </div>
     );
   }
@@ -34,9 +36,9 @@ export default function WorkspacePage() {
   return (
     <div className="flex h-full items-center justify-center text-muted-foreground">
       {!isLoading && channels?.length === 0 ? (
-        <p>No channels yet. Create one to get started.</p>
+        <p>{t('workspace.noChannels')}</p>
       ) : (
-        <p>Loading...</p>
+        <p>{t('common.loading')}</p>
       )}
     </div>
   );

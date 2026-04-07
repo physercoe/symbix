@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function WorkspaceLibrary({ workspaceId }: Props) {
+  const { t } = useTranslation();
   const [activeType, setActiveType] = useState<WorkspaceItemType | 'all'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState<WorkspaceItemType | null>(null);
@@ -99,8 +101,8 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
       <div className="shrink-0 border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold">Knowledge</h1>
-            <p className="text-sm text-muted-foreground">Shared docs, files, links, and templates for this workspace</p>
+            <h1 className="text-lg font-semibold">{t('knowledge.title' as any)}</h1>
+            <p className="text-sm text-muted-foreground">{t('knowledge.desc' as any)}</p>
           </div>
           <div className="flex gap-1">
             {(['doc', 'file', 'link', 'template'] as const).map((type) => (
@@ -136,20 +138,20 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
       {/* Create form */}
       {creating && (
         <div className="shrink-0 border-b px-6 py-4 bg-accent/20">
-          <p className="text-sm font-medium mb-3">New {creating}</p>
+          <p className="text-sm font-medium mb-3">{t('knowledge.newItem' as any, { type: creating })}</p>
           <div className="space-y-2 max-w-lg">
             <input
               autoFocus
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
-              placeholder="Title"
+              placeholder={t('knowledge.docTitlePlaceholder' as any)}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {(creating === 'link' || creating === 'file') && (
               <input
                 value={formUrl}
                 onChange={(e) => setFormUrl(e.target.value)}
-                placeholder={creating === 'link' ? 'URL (https://...)' : 'File path or URL'}
+                placeholder={creating === 'link' ? t('knowledge.urlPlaceholder' as any) : t('knowledge.filePathPlaceholder' as any)}
                 className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             )}
@@ -157,7 +159,7 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
               <textarea
                 value={formContent}
                 onChange={(e) => setFormContent(e.target.value)}
-                placeholder={creating === 'doc' ? 'Write in Markdown...' : 'Template content (Markdown)...'}
+                placeholder={creating === 'doc' ? t('knowledge.markdownPlaceholder' as any) : t('knowledge.templatePlaceholder' as any)}
                 rows={4}
                 className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
               />
@@ -165,7 +167,7 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
             <input
               value={formCategory}
               onChange={(e) => setFormCategory(e.target.value)}
-              placeholder="Category (optional, e.g. onboarding, api-refs)"
+              placeholder={t('knowledge.categoryPlaceholder' as any)}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <div className="flex gap-2 pt-1">
@@ -179,10 +181,10 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
                   url: formUrl || undefined,
                   category: formCategory || undefined,
                 })}>
-                Create
+                {t('common.create' as any)}
               </Button>
               <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setCreating(null)}>
-                Cancel
+                {t('common.cancel' as any)}
               </Button>
             </div>
           </div>
@@ -197,7 +199,7 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
             {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Loading...</p>}
             {items && items.length === 0 && (
               <p className="px-3 py-6 text-xs text-muted-foreground text-center">
-                No items yet. Create one to get started.
+                {t('knowledge.noItems' as any)}
               </p>
             )}
             {items?.map((item) => (
@@ -253,9 +255,9 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
                 <Button
                   variant="outline" size="sm"
                   className="text-red-400 border-red-400/30 hover:bg-red-400/10 text-xs h-7"
-                  onClick={() => { if (confirm('Delete this item?')) deleteItem.mutate({ id: selectedItem.id }); }}
+                  onClick={() => { if (confirm(t('knowledge.deleteConfirm' as any))) deleteItem.mutate({ id: selectedItem.id }); }}
                 >
-                  Delete
+                  {t('common.delete' as any)}
                 </Button>
               </div>
 
@@ -276,12 +278,12 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
               )}
 
               {!selectedItem.content && !selectedItem.url && (
-                <p className="text-sm text-muted-foreground">No content.</p>
+                <p className="text-sm text-muted-foreground">{t('common.noContent' as any)}</p>
               )}
             </div>
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
-              <p className="text-sm">Select an item to view details</p>
+              <p className="text-sm">{t('knowledge.selectItem' as any)}</p>
             </div>
           )}
         </ScrollArea>

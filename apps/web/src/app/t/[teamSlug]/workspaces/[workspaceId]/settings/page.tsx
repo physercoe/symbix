@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -12,6 +13,7 @@ export default function WorkspaceSettingsPage() {
   const workspaceId = params.workspaceId as string;
   const teamSlug = params.teamSlug as string;
 
+  const { t } = useTranslation();
   const { data: workspace } = trpc.workspaces.getById.useQuery({ id: workspaceId });
   const utils = trpc.useUtils();
 
@@ -37,7 +39,7 @@ export default function WorkspaceSettingsPage() {
   return (
     <div className="h-full overflow-auto p-8">
       <div className="max-w-2xl space-y-8">
-        <h1 className="text-2xl font-bold">Workspace Settings</h1>
+        <h1 className="text-2xl font-bold">{t('workspace.settings')}</h1>
 
         <form
           className="space-y-4"
@@ -49,26 +51,26 @@ export default function WorkspaceSettingsPage() {
           }}
         >
           <div>
-            <label className="text-sm font-medium">Workspace Name</label>
+            <label className="text-sm font-medium">{t('workspace.workspaceName')}</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <Button type="submit" disabled={updateWorkspace.isPending}>
-            {updateWorkspace.isPending ? 'Saving...' : 'Save'}
+            {updateWorkspace.isPending ? t('common.saving') : t('common.save')}
           </Button>
         </form>
 
         <div className="rounded-lg border border-red-500/20 p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-red-400">Danger Zone</h2>
+          <h2 className="text-sm font-semibold text-red-400">{t('settings.dangerZone')}</h2>
           <Button
             variant="destructive"
             size="sm"
             onClick={() => {
-              if (workspace && confirm(`Delete workspace "${workspace.name}"?`)) {
+              if (workspace && confirm(t('workspace.deleteConfirm', { name: workspace.name }))) {
                 deleteWorkspace.mutate({ id: workspaceId });
               }
             }}
           >
-            Delete Workspace
+            {t('workspace.deleteWorkspace')}
           </Button>
         </div>
       </div>

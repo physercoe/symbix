@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import {
   Dialog,
   DialogContent,
@@ -20,15 +21,17 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-const MACHINE_TYPES = [
-  { value: 'desktop', label: 'Desktop' },
-  { value: 'server', label: 'Server' },
-  { value: 'cloud', label: 'Cloud VM' },
-  { value: 'robot', label: 'Robot' },
-  { value: 'browser', label: 'Browser' },
-] as const;
-
 export function AddMachineDialog({ workspaceId, open, onOpenChange }: Props) {
+  const { t } = useTranslation();
+
+  const MACHINE_TYPES = [
+    { value: 'desktop', label: t('machines.type.desktop' as any) },
+    { value: 'server', label: t('machines.type.server' as any) },
+    { value: 'cloud', label: t('machines.type.cloud' as any) },
+    { value: 'robot', label: t('machines.type.robot' as any) },
+    { value: 'browser', label: t('machines.type.browser' as any) },
+  ] as const;
+
   const [name, setName] = useState('');
   const [machineType, setMachineType] = useState<string>('desktop');
   const [result, setResult] = useState<{ apiKey: string; name: string } | null>(null);
@@ -66,9 +69,9 @@ export function AddMachineDialog({ workspaceId, open, onOpenChange }: Props) {
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Machine Registered</DialogTitle>
+            <DialogTitle>{t('machines.machineRegistered' as any)}</DialogTitle>
             <DialogDescription>
-              Run this command on &quot;{result.name}&quot; to connect it to Symbix:
+              {t('machines.connectCommand' as any, { name: result.name })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -76,14 +79,14 @@ export function AddMachineDialog({ workspaceId, open, onOpenChange }: Props) {
               <code className="text-sm break-all">{connectCommand}</code>
             </div>
             <Button variant="outline" size="sm" onClick={handleCopy} className="w-full">
-              {copied ? 'Copied!' : 'Copy command'}
+              {copied ? t('common.copied' as any) : t('machines.copyCommand' as any)}
             </Button>
             <p className="text-xs text-muted-foreground">
-              This API key will only be shown once. Store it safely if needed.
+              {t('machines.apiKeyWarning' as any)}
             </p>
           </div>
           <DialogFooter>
-            <Button onClick={handleClose}>Done</Button>
+            <Button onClick={handleClose}>{t('common.done' as any)}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -94,9 +97,9 @@ export function AddMachineDialog({ workspaceId, open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Machine</DialogTitle>
+          <DialogTitle>{t('machines.addMachine' as any)}</DialogTitle>
           <DialogDescription>
-            Register a machine to run agents on it.
+            {t('machines.addMachineDesc' as any)}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -113,7 +116,7 @@ export function AddMachineDialog({ workspaceId, open, onOpenChange }: Props) {
         >
           <div className="space-y-4">
             <div>
-              <label htmlFor="m-name" className="text-sm font-medium">Machine name</label>
+              <label htmlFor="m-name" className="text-sm font-medium">{t('machines.machineName' as any)}</label>
               <Input
                 id="m-name"
                 value={name}
@@ -123,7 +126,7 @@ export function AddMachineDialog({ workspaceId, open, onOpenChange }: Props) {
               />
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">Type</p>
+              <p className="text-sm font-medium mb-2">{t('channel.type' as any)}</p>
               <div className="flex flex-wrap gap-2">
                 {MACHINE_TYPES.map((t) => (
                   <button
@@ -144,9 +147,9 @@ export function AddMachineDialog({ workspaceId, open, onOpenChange }: Props) {
             </div>
           </div>
           <DialogFooter className="mt-4">
-            <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={handleClose}>{t('common.cancel' as any)}</Button>
             <Button type="submit" disabled={!name.trim() || register.isPending}>
-              {register.isPending ? 'Registering...' : 'Register'}
+              {register.isPending ? t('machines.registering' as any) : t('machines.register' as any)}
             </Button>
           </DialogFooter>
         </form>

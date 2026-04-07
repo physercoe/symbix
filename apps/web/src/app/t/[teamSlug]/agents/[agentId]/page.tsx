@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { AgentPanel } from '@/components/agent/AgentPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ const statusDot: Record<string, string> = {
 };
 
 export default function AgentDetailPage() {
+  const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const teamSlug = params.teamSlug as string;
@@ -42,7 +44,7 @@ export default function AgentDetailPage() {
   if (!agent) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
-        Agent not found.
+        {t('agents.notFound' as any)}
       </div>
     );
   }
@@ -64,15 +66,15 @@ export default function AgentDetailPage() {
 
         {/* Metrics section */}
         <div>
-          <h2 className="text-lg font-semibold mb-4">Metrics (30 days)</h2>
+          <h2 className="text-lg font-semibold mb-4">{t('agents.metrics30d' as any)}</h2>
 
           {/* Summary cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <MetricCard label="Messages" value={overview?.messages30d ?? 0} />
-            <MetricCard label="Responses" value={overview?.responses30d ?? 0} />
-            <MetricCard label="Tool Calls" value={overview?.toolCalls30d ?? 0} />
+            <MetricCard label={t('agents.messages' as any)} value={overview?.messages30d ?? 0} />
+            <MetricCard label={t('agents.responses' as any)} value={overview?.responses30d ?? 0} />
+            <MetricCard label={t('agents.toolCalls' as any)} value={overview?.toolCalls30d ?? 0} />
             <MetricCard
-              label="Avg Latency"
+              label={t('agents.avgLatency' as any)}
               value={overview?.avgLatencyMs != null ? `${(overview.avgLatencyMs / 1000).toFixed(1)}s` : '—'}
             />
           </div>
@@ -81,7 +83,7 @@ export default function AgentDetailPage() {
           {toolUsage && toolUsage.length > 0 && (
             <section>
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                Tool Usage
+                {t('agents.toolUsage' as any)}
               </h3>
               <div className="space-y-2">
                 {toolUsage.map((tool) => {
@@ -89,7 +91,7 @@ export default function AgentDetailPage() {
                   return (
                     <div key={tool.toolName} className="flex items-center gap-3">
                       <span className="text-sm text-muted-foreground w-40 truncate shrink-0">
-                        {tool.toolName ?? 'unknown'}
+                        {tool.toolName ?? t('common.unknown' as any)}
                       </span>
                       <div className="flex-1 h-6 bg-accent/30 rounded overflow-hidden">
                         <div
@@ -108,7 +110,7 @@ export default function AgentDetailPage() {
           {/* Empty state */}
           {overview && overview.messages30d === 0 && overview.toolCalls30d === 0 && (
             <div className="rounded-lg border border-dashed p-8 text-center">
-              <p className="text-sm text-muted-foreground">No activity in the last 30 days</p>
+              <p className="text-sm text-muted-foreground">{t('dashboard.noActivity30d' as any)}</p>
             </div>
           )}
         </div>

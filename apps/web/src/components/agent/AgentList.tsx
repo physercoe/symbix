@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,6 +24,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function AgentList({ workspaceId }: Props) {
+  const { t } = useTranslation();
   const [spawnOpen, setSpawnOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const { data: agents, isLoading } = trpc.agents.list.useQuery({ workspaceId });
@@ -52,22 +54,22 @@ export function AgentList({ workspaceId }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Agents</h3>
+        <h3 className="text-sm font-semibold">{t('agents.title' as any)}</h3>
         <Button size="sm" variant="outline" onClick={() => setSpawnOpen(true)}>
-          Add Agent
+          {t('agents.addAgent' as any)}
         </Button>
       </div>
 
       {agents && agents.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No agents yet. Add a hosted bot or spawn an agent on a machine.
+          {t('agents.noAgentsDesc' as any)}
         </p>
       )}
 
       {/* Hosted bots (no machine) */}
       {hostedBots.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">Hosted Bots</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">{t('agents.hostedBots' as any)}</p>
           <div className="space-y-1">
             {hostedBots.map((agent) => (
               <button

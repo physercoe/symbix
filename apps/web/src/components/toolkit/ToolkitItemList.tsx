@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,11 +10,11 @@ import { Markdown } from '@/components/ui/markdown';
 import { cn } from '@/lib/utils';
 import type { UserItemType } from '@symbix/shared';
 
-const TYPE_CONFIG: Record<UserItemType, { label: string; plural: string; description: string; badgeColor: string; hasLanguage: boolean; hasUrl: boolean; createLabel: string }> = {
-  insight: { label: 'Insight', plural: 'Insights', description: 'Learnings and notes from projects', badgeColor: 'text-yellow-400 border-yellow-400/30', hasLanguage: false, hasUrl: false, createLabel: '+ Insight' },
-  reference: { label: 'Reference', plural: 'References', description: 'Saved messages and bookmarks', badgeColor: 'text-amber-400 border-amber-400/30', hasLanguage: false, hasUrl: false, createLabel: '+ Reference' },
-  pattern: { label: 'Pattern', plural: 'Patterns', description: 'Reusable code, prompts, and workflows', badgeColor: 'text-cyan-400 border-cyan-400/30', hasLanguage: true, hasUrl: false, createLabel: '+ Pattern' },
-  asset: { label: 'Asset', plural: 'Assets', description: 'Files, images, and data you carry across projects', badgeColor: 'text-emerald-400 border-emerald-400/30', hasLanguage: false, hasUrl: true, createLabel: '+ Asset' },
+const TYPE_STYLE: Record<UserItemType, { badgeColor: string; hasLanguage: boolean; hasUrl: boolean }> = {
+  insight: { badgeColor: 'text-yellow-400 border-yellow-400/30', hasLanguage: false, hasUrl: false },
+  reference: { badgeColor: 'text-amber-400 border-amber-400/30', hasLanguage: false, hasUrl: false },
+  pattern: { badgeColor: 'text-cyan-400 border-cyan-400/30', hasLanguage: true, hasUrl: false },
+  asset: { badgeColor: 'text-emerald-400 border-emerald-400/30', hasLanguage: false, hasUrl: true },
 };
 
 const LANGUAGES = ['typescript', 'javascript', 'python', 'go', 'rust', 'bash', 'sql', 'yaml', 'json', 'markdown', 'prompt', 'other'];
@@ -22,8 +23,17 @@ interface Props {
   type: UserItemType;
 }
 
+const TYPE_I18N_KEYS: Record<UserItemType, { label: string; plural: string; desc: string; create: string }> = {
+  insight: { label: 'nav.insights', plural: 'nav.insights', desc: 'toolkit.insightDesc', create: 'toolkit.addInsight' },
+  reference: { label: 'nav.references', plural: 'nav.references', desc: 'toolkit.referenceDesc', create: 'toolkit.addReference' },
+  pattern: { label: 'nav.patterns', plural: 'nav.patterns', desc: 'toolkit.patternDesc', create: 'toolkit.addPattern' },
+  asset: { label: 'nav.assets', plural: 'nav.assets', desc: 'toolkit.assetDesc', create: 'toolkit.addAsset' },
+};
+
 export function ToolkitItemList({ type }: Props) {
-  const config = TYPE_CONFIG[type];
+  const { t } = useTranslation();
+  const style = TYPE_STYLE[type];
+  const keys = TYPE_I18N_KEYS[type];
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [formTitle, setFormTitle] = useState('');
@@ -52,11 +62,11 @@ export function ToolkitItemList({ type }: Props) {
       <div className="shrink-0 border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold">{config.plural}</h1>
-            <p className="text-sm text-muted-foreground">{config.description}</p>
+            <h1 className="text-lg font-semibold">{t(keys.plural as any)}</h1>
+            <p className="text-sm text-muted-foreground">{t(keys.desc as any)}</p>
           </div>
           <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => { setCreating(true); resetForm(); }}>
-            {config.createLabel}
+            {t(keys.create as any)}
           </Button>
         </div>
       </div>
@@ -64,34 +74,34 @@ export function ToolkitItemList({ type }: Props) {
       {/* Create form */}
       {creating && (
         <div className="shrink-0 border-b px-6 py-4 bg-accent/20">
-          <p className="text-sm font-medium mb-3">New {config.label.toLowerCase()}</p>
+          <p className="text-sm font-medium mb-3">{t('toolkit.newItem', { type: t(keys.label as any) })}</p>
           <div className="space-y-2 max-w-lg">
-            <input autoFocus value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder="Title"
+            <input autoFocus value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder={t('common.title')}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-            {config.hasLanguage && (
+            {style.hasLanguage && (
               <select value={formLanguage} onChange={(e) => setFormLanguage(e.target.value)}
                 className="rounded-md border border-input bg-background px-3 py-1.5 text-sm">
                 {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
             )}
-            {config.hasUrl && (
-              <input value={formUrl} onChange={(e) => setFormUrl(e.target.value)} placeholder="URL or file path"
+            {style.hasUrl && (
+              <input value={formUrl} onChange={(e) => setFormUrl(e.target.value)} placeholder={t('toolkit.urlOrPath')}
                 className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             )}
             <textarea value={formContent} onChange={(e) => setFormContent(e.target.value)}
-              placeholder={type === 'pattern' ? 'Paste code or prompt...' : 'Content...'}
+              placeholder={type === 'pattern' ? t('toolkit.pasteCode') : t('toolkit.content')}
               rows={type === 'pattern' ? 8 : 4}
               className={cn('w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y', type === 'pattern' && 'font-mono')} />
-            <input value={formCategory} onChange={(e) => setFormCategory(e.target.value)} placeholder="Category (optional)"
+            <input value={formCategory} onChange={(e) => setFormCategory(e.target.value)} placeholder={t('toolkit.categoryOptional')}
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             <div className="flex gap-2 pt-1">
               <Button size="sm" className="h-8 text-xs" disabled={!formTitle.trim()}
                 onClick={() => createItem.mutate({
                   type, title: formTitle.trim(), content: formContent || undefined,
-                  language: config.hasLanguage ? formLanguage : undefined,
+                  language: style.hasLanguage ? formLanguage : undefined,
                   url: formUrl || undefined, category: formCategory || undefined,
-                })}>Create</Button>
-              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setCreating(false)}>Cancel</Button>
+                })}>{t('common.create')}</Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setCreating(false)}>{t('common.cancel')}</Button>
             </div>
           </div>
         </div>
@@ -101,10 +111,10 @@ export function ToolkitItemList({ type }: Props) {
       <div className="flex-1 min-h-0 flex">
         <ScrollArea className="w-80 border-r">
           <div className="p-2 space-y-0.5">
-            {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Loading...</p>}
+            {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">{t('common.loading')}</p>}
             {items && items.length === 0 && (
               <p className="px-3 py-6 text-xs text-muted-foreground text-center">
-                {type === 'reference' ? 'No saved references yet. Right-click a message to save it.' : `No ${config.plural.toLowerCase()} yet.`}
+                {type === 'reference' ? t('toolkit.noReferences') : t('toolkit.noItems', { type: t(keys.plural as any) })}
               </p>
             )}
             {items?.map((item) => (
@@ -129,14 +139,14 @@ export function ToolkitItemList({ type }: Props) {
                 <div>
                   <h2 className="text-lg font-semibold">{selectedItem.title}</h2>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                    <Badge variant="outline" className={cn('text-[10px] px-1 py-0', config.badgeColor)}>{config.label}</Badge>
+                    <Badge variant="outline" className={cn('text-[10px] px-1 py-0', style.badgeColor)}>{t(keys.label as any)}</Badge>
                     {selectedItem.language && <span>{selectedItem.language}</span>}
                     {selectedItem.category && <span>{selectedItem.category}</span>}
                     <span>Updated {new Date(selectedItem.updatedAt).toLocaleString()}</span>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" className="text-red-400 border-red-400/30 hover:bg-red-400/10 text-xs h-7"
-                  onClick={() => { if (confirm('Delete?')) deleteItem.mutate({ id: selectedItem.id }); }}>Delete</Button>
+                  onClick={() => { if (confirm(t('toolkit.deleteItemConfirm'))) deleteItem.mutate({ id: selectedItem.id }); }}>{t('common.delete')}</Button>
               </div>
 
               {type === 'reference' && selectedItem.metadata && (
@@ -159,7 +169,7 @@ export function ToolkitItemList({ type }: Props) {
             </div>
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
-              <p className="text-sm">Select an item to view</p>
+              <p className="text-sm">{t('toolkit.selectItem')}</p>
             </div>
           )}
         </ScrollArea>
