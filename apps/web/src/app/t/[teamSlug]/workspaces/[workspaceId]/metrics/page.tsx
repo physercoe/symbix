@@ -57,7 +57,7 @@ export default function WorkspaceMetricsPage() {
                       <p className="text-xs text-muted-foreground truncate">{ch.description}</p>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground capitalize">{ch.type}</span>
+                  <span className="text-xs text-muted-foreground capitalize">{t(`channel.type.${ch.type}` as any)}</span>
                 </div>
               ))}
             </div>

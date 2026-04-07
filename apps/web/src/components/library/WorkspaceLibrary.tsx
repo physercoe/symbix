@@ -11,13 +11,22 @@ import { Markdown } from '@/components/ui/markdown';
 import { cn } from '@/lib/utils';
 import type { WorkspaceItemType } from '@symbix/shared';
 
-const LIBRARY_TABS: { id: WorkspaceItemType | 'all'; label: string; icon: string }[] = [
-  { id: 'all', label: 'All', icon: '' },
-  { id: 'doc', label: 'Docs', icon: '' },
-  { id: 'file', label: 'Files', icon: '' },
-  { id: 'link', label: 'Links', icon: '' },
-  { id: 'template', label: 'Templates', icon: '' },
-];
+const LIBRARY_TAB_IDS: (WorkspaceItemType | 'all')[] = ['all', 'doc', 'file', 'link', 'template'];
+
+const TAB_I18N_KEYS: Record<string, string> = {
+  all: 'knowledge.tabAll',
+  doc: 'knowledge.tabDocs',
+  file: 'knowledge.tabFiles',
+  link: 'knowledge.tabLinks',
+  template: 'knowledge.tabTemplates',
+};
+
+const TYPE_I18N_KEYS: Record<string, string> = {
+  doc: 'knowledge.typeDoc',
+  file: 'knowledge.typeFile',
+  link: 'knowledge.typeLink',
+  template: 'knowledge.typeTemplate',
+};
 
 interface Props {
   workspaceId: string;
@@ -108,7 +117,7 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
             {(['doc', 'file', 'link', 'template'] as const).map((type) => (
               <Button key={type} variant="outline" size="sm" className="text-xs h-8"
                 onClick={() => { setCreating(type); resetForm(); }}>
-                + {type.charAt(0).toUpperCase() + type.slice(1)}
+                + {t(TYPE_I18N_KEYS[type] as any)}
               </Button>
             ))}
           </div>
@@ -116,20 +125,20 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
 
         {/* Type tabs */}
         <div className="flex items-center gap-0.5 mt-3">
-          {LIBRARY_TABS.map((tab) => (
+          {LIBRARY_TAB_IDS.map((tabId) => (
             <button
-              key={tab.id}
+              key={tabId}
               type="button"
-              onClick={() => { setActiveType(tab.id); setSelectedId(null); }}
+              onClick={() => { setActiveType(tabId); setSelectedId(null); }}
               className={cn(
                 'px-3 py-1 text-xs rounded-md transition-colors whitespace-nowrap',
-                activeType === tab.id
+                activeType === tabId
                   ? 'bg-accent text-accent-foreground font-medium'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
               )}
             >
-              {tab.label}
-              {items && tab.id === 'all' && <span className="ml-1 opacity-60">{items.length}</span>}
+              {t(TAB_I18N_KEYS[tabId] as any)}
+              {items && tabId === 'all' && <span className="ml-1 opacity-60">{items.length}</span>}
             </button>
           ))}
         </div>
@@ -196,7 +205,7 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
         {/* Item list */}
         <ScrollArea className="w-80 border-r">
           <div className="p-2 space-y-0.5">
-            {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Loading...</p>}
+            {isLoading && <p className="px-3 py-2 text-xs text-muted-foreground">{t('common.loading')}</p>}
             {items && items.length === 0 && (
               <p className="px-3 py-6 text-xs text-muted-foreground text-center">
                 {t('knowledge.noItems' as any)}
@@ -220,7 +229,7 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className={cn('text-[10px] px-1 py-0', typeBadgeColor(item.type))}>
-                    {item.type}
+                    {t((TYPE_I18N_KEYS[item.type] ?? item.type) as any)}
                   </Badge>
                   {item.category && (
                     <span className="text-[10px] text-muted-foreground truncate">{item.category}</span>
@@ -246,10 +255,10 @@ export function WorkspaceLibrary({ workspaceId }: Props) {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Badge variant="outline" className={cn('text-[10px] px-1 py-0', typeBadgeColor(selectedItem.type))}>
-                      {selectedItem.type}
+                      {t((TYPE_I18N_KEYS[selectedItem.type] ?? selectedItem.type) as any)}
                     </Badge>
                     {selectedItem.category && <span>{selectedItem.category}</span>}
-                    <span>Updated {new Date(selectedItem.updatedAt).toLocaleString()}</span>
+                    <span>{t('knowledge.updated' as any)} {new Date(selectedItem.updatedAt).toLocaleString()}</span>
                   </div>
                 </div>
                 <Button
